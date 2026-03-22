@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAML Deep Dive Cheatsheet</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@400;600&family=Literata:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1e2d45;
+    --accent: #00d4ff;
+    --accent2: #ff6b35;
+    --accent3: #7c3aed;
+    --accent4: #10b981;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --gold: #f59e0b;
+  }
+
+  body {
+    font-family: 'Literata', Georgia, serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 20%, rgba(0,212,255,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(124,58,237,0.06) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 6rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* HEADER */
+  header {
+    text-align: center;
+    padding: 4rem 0 3rem;
+    position: relative;
+  }
+
+  .badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 0.3rem 0.8rem;
+    border-radius: 2px;
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.1s;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #fff 0%, var(--accent) 50%, var(--accent3) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.2s;
+  }
+
+  .subtitle {
+    margin-top: 1rem;
+    color: var(--muted);
+    font-size: 1.05rem;
+    font-style: italic;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.3s;
+  }
+
+  /* SECTIONS */
+  .section {
+    margin: 3rem 0;
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .section.visible { opacity: 1; transform: translateY(0); }
+
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+  }
+
+  h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-bottom: 1.25rem;
+    color: #fff;
+  }
+
+  /* ANALOGY CARD */
+  .analogy-card {
+    background: linear-gradient(135deg, rgba(0,212,255,0.08), rgba(124,58,237,0.08));
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 1.5rem 1.75rem;
+    margin: 1.25rem 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .analogy-card::before {
+    content: '💡';
+    position: absolute;
+    top: -10px;
+    right: 1rem;
+    font-size: 2.5rem;
+    opacity: 0.15;
+  }
+  .analogy-card strong {
+    color: var(--accent);
+    font-family: 'Syne', sans-serif;
+  }
+
+  /* FLOW DIAGRAM */
+  .flow-diagram {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    margin: 1.5rem 0;
+    overflow-x: auto;
+  }
+
+  .flow-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    text-align: center;
+  }
+
+  .flow-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+  }
+
+  .flow-step {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 1rem;
+    align-items: start;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .step-num {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 0.25rem;
+  }
+
+  .step-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    z-index: 1;
+    position: relative;
+    line-height: 1;
+    padding-bottom: 1px; /* nudge baseline up visually */
+  }
+
+  .step-line {
+    width: 2px;
+    flex: 1;
+    min-height: 40px;
+    background: var(--border);
+    margin-top: 4px;
+  }
+
+  .flow-step:last-child .step-line { display: none; }
+
+  .step-content {
+    padding: 0.2rem 0 2rem;
+  }
+
+  .step-actor {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+    opacity: 0.7;
+  }
+
+  .step-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 0.4rem;
+    color: #fff;
+  }
+
+  .step-desc {
+    font-size: 0.9rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .step-detail {
+    display: none;
+    margin-top: 0.75rem;
+    background: var(--surface2);
+    border-radius: 6px;
+    padding: 0.9rem 1rem;
+    font-size: 0.85rem;
+    color: var(--text);
+    border-left: 2px solid var(--accent);
+  }
+  .step-detail.open { display: block; animation: fadeIn 0.3s ease; }
+
+  /* color variants */
+  .c-user .step-circle { background: rgba(0,212,255,0.15); color: var(--accent); border: 2px solid var(--accent); }
+  .c-user .step-actor { color: var(--accent); }
+  .c-sp .step-circle { background: rgba(255,107,53,0.15); color: var(--accent2); border: 2px solid var(--accent2); }
+  .c-sp .step-actor { color: var(--accent2); }
+  .c-idp .step-circle { background: rgba(124,58,237,0.15); color: var(--accent3); border: 2px solid var(--accent3); }
+  .c-idp .step-actor { color: var(--accent3); }
+  .c-done .step-circle { background: rgba(16,185,129,0.15); color: var(--accent4); border: 2px solid var(--accent4); }
+  .c-done .step-actor { color: var(--accent4); }
+
+  .flow-step:hover .step-circle { transform: scale(1.1); box-shadow: 0 0 16px rgba(0,212,255,0.3); }
+
+  /* ACTORS */
+  .actors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+    margin: 1.25rem 0;
+  }
+
+  .actor-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .actor-card:hover { transform: translateY(-2px); }
+  .actor-card.user { border-top: 3px solid var(--accent); }
+  .actor-card.sp { border-top: 3px solid var(--accent2); }
+  .actor-card.idp { border-top: 3px solid var(--accent3); }
+
+  .actor-icon { font-size: 1.75rem; margin-bottom: 0.5rem; }
+  .actor-name {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 0.2rem;
+  }
+  .actor-full {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.05em;
+  }
+  .actor-desc { font-size: 0.88rem; color: var(--muted); }
+
+  /* CONCEPTS GRID */
+  .concepts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+    margin: 1.25rem 0;
+  }
+
+  .concept-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .concept-card:hover { border-color: var(--accent); background: var(--surface2); }
+
+  .concept-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 0.35rem;
+  }
+
+  .concept-name {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    color: #fff;
+    margin-bottom: 0.5rem;
+  }
+
+  .concept-body {
+    font-size: 0.88rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .concept-example {
+    display: none;
+    margin-top: 0.75rem;
+    padding: 0.7rem 0.9rem;
+    background: rgba(245,158,11,0.08);
+    border-left: 2px solid var(--gold);
+    border-radius: 4px;
+    font-size: 0.82rem;
+    color: var(--text);
+  }
+  .concept-card:hover .concept-example,
+  .concept-card.active .concept-example { display: block; }
+
+  /* XML BLOCK */
+  .xml-block {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1.25rem 0;
+    overflow-x: auto;
+    position: relative;
+  }
+
+  .xml-block pre {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    line-height: 1.8;
+    color: #a3b4c6;
+    white-space: pre;
+  }
+
+  .xml-tag { color: #79b8ff; }
+  .xml-attr { color: #ffab70; }
+  .xml-val { color: #9ecbff; }
+  .xml-comment { color: #586e75; font-style: italic; }
+  .xml-highlight { color: #85e89d; }
+
+  .copy-btn {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  .copy-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* COMPARISON TABLE */
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+    margin: 1.25rem 0;
+  }
+  .compare-table th {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 2px solid var(--border);
+    color: var(--muted);
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .compare-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .compare-table tr:hover td { background: var(--surface2); }
+  .yes { color: var(--accent4); font-weight: 600; }
+  .no { color: #ef4444; }
+  .partial { color: var(--gold); }
+
+  /* BINDINGS */
+  .bindings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin: 1.25rem 0;
+  }
+  .binding-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+  }
+  .binding-name {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+  .binding-badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 2px;
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .badge-common { background: rgba(16,185,129,0.2); color: var(--accent4); }
+  .badge-legacy { background: rgba(100,116,139,0.2); color: var(--muted); }
+  .binding-desc { font-size: 0.85rem; color: var(--muted); }
+
+  /* CALLOUTS */
+  .callout {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border-radius: 8px;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+    align-items: flex-start;
+  }
+  .callout-icon { font-size: 1.2rem; flex-shrink: 0; }
+  .callout.warn { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); }
+  .callout.info { background: rgba(0,212,255,0.06); border: 1px solid rgba(0,212,255,0.15); }
+  .callout.danger { background: rgba(239,68,68,0.07); border: 1px solid rgba(239,68,68,0.2); }
+  .callout.success { background: rgba(16,185,129,0.06); border: 1px solid rgba(16,185,129,0.2); }
+
+  /* DIVIDER */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2.5rem 0;
+    position: relative;
+  }
+  .divider::after {
+    content: '◆';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--bg);
+    padding: 0 0.5rem;
+    color: var(--border);
+    font-size: 0.6rem;
+  }
+
+  /* QUIZ */
+  .quiz-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    margin: 2rem 0;
+  }
+  .quiz-q {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: #fff;
+    margin-bottom: 1rem;
+  }
+  .quiz-options { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem; }
+  .quiz-opt {
+    padding: 0.7rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.88rem;
+    transition: all 0.2s;
+    background: var(--surface2);
+  }
+  .quiz-opt:hover { border-color: var(--accent); color: var(--accent); }
+  .quiz-opt.correct { border-color: var(--accent4); color: var(--accent4); background: rgba(16,185,129,0.08); }
+  .quiz-opt.wrong { border-color: #ef4444; color: #ef4444; background: rgba(239,68,68,0.08); }
+  .quiz-feedback { font-size: 0.85rem; color: var(--muted); min-height: 1.5em; }
+  .quiz-nav {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    align-items: center;
+  }
+  .btn {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    padding: 0.5rem 1.2rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #0a0e1a;
+  }
+  .btn-primary:hover { background: #33deff; }
+  .btn-secondary {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { color: var(--text); border-color: var(--text); }
+  .quiz-counter { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--muted); margin-left: auto; }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  /* TOC */
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
+    margin: 2rem 0;
+  }
+  .toc-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.75rem;
+  }
+  .toc-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.35rem;
+    list-style: none;
+  }
+  .toc-list a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.88rem;
+    transition: color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .toc-list a:hover { color: var(--accent); }
+  .toc-list a::before {
+    content: '→';
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--border);
+  }
+
+  /* inline mono */
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82em;
+    background: var(--surface2);
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+    color: var(--accent);
+  }
+
+  p { margin-bottom: 0.75rem; }
+  p:last-child { margin-bottom: 0; }
+
+  @media (max-width: 600px) {
+    .flow-step { grid-template-columns: 60px 1fr; }
+    .actors-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <header>
+    <div class="badge">Web-Security Basics</div>
+    <h1>SAML Decoded</h1>
+    <p class="subtitle">The only guide you'll ever need for SAML.</p>
+  </header>
+
+  <!-- TOC -->
+  <nav class="toc section" id="s0">
+    <div class="toc-title">Contents</div>
+    <ul class="toc-list">
+      <li><a href="#s1">What is SAML?</a></li>
+      <li><a href="#s2">The Three Actors</a></li>
+      <li><a href="#s3">The Full Flow</a></li>
+      <li><a href="#s4">Key Concepts</a></li>
+      <li><a href="#s5">The Assertion (XML)</a></li>
+      <li><a href="#s6">SP vs IdP Initiated</a></li>
+      <li><a href="#s7">Bindings</a></li>
+      <li><a href="#s8">SAML vs Others</a></li>
+      <li><a href="#s9">Common Pitfalls</a></li>
+      <li><a href="#s10">Test Yourself</a></li>
+    </ul>
+  </nav>
+
+  <!-- SECTION 1: WHAT IS SAML -->
+  <section class="section" id="s1">
+    <div class="section-label">01 — Foundation</div>
+    <h2>What is SAML?</h2>
+
+    <p><strong>SAML</strong> stands for <strong>Security Assertion Markup Language</strong>. It's an open standard (XML-based) for exchanging authentication and authorization data between parties, <i>specifically</i> between an <em>identity provider</em> and a <em>service provider</em>.</p>
+
+    <p>The core problem SAML solves: <strong>How can App B trust that you've already logged into App A, without App B ever seeing your password?</strong></p>
+
+    <div class="analogy-card">
+      <strong>🏨 The Hotel Key Analogy</strong><br><br>
+      Imagine you check into a hotel (the <em>Identity Provider</em>). The receptionist verifies your passport, then gives you a key card. Now you can access the gym, the pool, the restaurant, <strong>all without showing your passport again</strong>. Each service just reads your key card.<br><br>
+      SAML is the key card system. The assertion is the key card. The hotel is your company's SSO. The gym, pool, and restaurant are Salesforce, Slack, and GitHub.
+    </div>
+
+    <p>SAML enables <strong>Single Sign-On (SSO)</strong>: log in once, access many applications. No repeated passwords. No app-by-app accounts. Centralized control.</p>
+
+    <div class="callout info">
+      <span class="callout-icon">📅</span>
+      <span>SAML 2.0 was ratified in 2005 by OASIS. It remains the dominant enterprise SSO standard, widely used in corporate environments alongside newer alternatives like OAuth 2.0 and OIDC.</span>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION 2: ACTORS -->
+  <section class="section" id="s2">
+    <div class="section-label">02 — The Cast</div>
+    <h2>The Three Actors</h2>
+
+    <div class="actors-grid">
+      <div class="actor-card user">
+        <div class="actor-icon">🧑‍💻</div>
+        <div class="actor-name"><em>User</em> / Principal</div>
+        <div class="actor-full">aka "Subject"</div>
+        <div class="actor-desc">The human who wants access. Typically uses a browser. They're the reason any of this exists, <strong>everything else serves them.</strong></div>
+      </div>
+      <div class="actor-card sp">
+        <div class="actor-icon">🏢</div>
+        <div class="actor-name">Service Provider</div>
+        <div class="actor-full"><em>SP</em>, e.g. Salesforce, GitHub, Slack</div>
+        <div class="actor-desc">The app the user wants to access. It <em>trusts</em> the IdP to vouch for users. It never sees passwords, <em>only</em> assertions.</div>
+      </div>
+      <div class="actor-card idp">
+        <div class="actor-icon">🔐</div>
+        <div class="actor-name">Identity Provider</div>
+        <div class="actor-full"><em>IdP</em>, e.g. Okta, Azure AD, ADFS</div>
+        <div class="actor-desc">The authority on who you are. It holds credentials, verifies identity, and issues signed assertions. The source of trust.</div>
+      </div>
+    </div>
+
+    <div class="analogy-card">
+      <strong>🍺 The Nightclub Analogy</strong><br><br>
+      You (<em>User</em>) want to enter a club (<em>SP</em>). The bouncer (<em>SP</em>) doesn't know you personally. But your government (<em>IdP</em>) issued you a passport. The bouncer trusts the government, checks the stamp, and lets you in. The bouncer never needed to call the government directly, <strong>the signed passport <em>is</em> the proof</strong>.
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION 3: THE FLOW -->
+  <section class="section" id="s3">
+    <div class="section-label">03 — The Workflow</div>
+    <h2>The Full SAML Flow</h2>
+    <p>Click any step to expand the detail. This is SP-initiated flow (most common).</p>
+
+    <div class="flow-diagram">
+      <div class="flow-title">SP-Initiated SAML 2.0 Flow</div>
+      <div class="flow-steps">
+
+        <div class="flow-step c-user" onclick="toggleStep(this)">
+          <div class="step-num">
+            <div class="step-circle">1</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <div class="step-actor">User</div>
+            <div class="step-title">Visits the Service Provider</div>
+            <div class="step-desc">User tries to access <code>app.salesforce.com/dashboard</code> without being logged in.</div>
+            <div class="step-detail">The SP detects there's no valid session cookie. It needs to figure out who this person is before granting access. It will redirect to the IdP for authentication.</div>
+          </div>
+        </div>
+
+        <div class="flow-step c-sp" onclick="toggleStep(this)">
+          <div class="step-num">
+            <div class="step-circle">2</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <div class="step-actor">Service Provider</div>
+            <div class="step-title">Generates an AuthnRequest</div>
+            <div class="step-desc">The SP builds a signed XML document saying "I need this user authenticated." This is the <code>AuthnRequest</code>.</div>
+            <div class="step-detail">The AuthnRequest contains: the SP's entity ID, the requested assertion consumer URL (where IdP should send the response), timestamp, and a unique request ID to prevent replay attacks. It's often Base64-encoded and URL-encoded.</div>
+          </div>
+        </div>
+
+        <div class="flow-step c-sp" onclick="toggleStep(this)">
+          <div class="step-num">
+            <div class="step-circle">3</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <div class="step-actor">Service Provider → Browser</div>
+            <div class="step-title">Redirects User to IdP</div>
+            <div class="step-desc">The SP sends a <code>302 Redirect</code> to the browser pointing at the IdP's SSO URL, with the AuthnRequest embedded in the query string.</div>
+            <div class="step-detail">Example redirect URL: <code>https://idp.okta.com/sso/saml?SAMLRequest=PHNhbWxwOi...&RelayState=/dashboard</code><br><br>The <code>RelayState</code> is a bookmark, it <strong>remembers where the user was trying to go</strong>, so after login they land in the right place.</div>
+          </div>
+        </div>
+
+        <div class="flow-step c-user" onclick="toggleStep(this)">
+          <div class="step-num">
+            <div class="step-circle">4</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <div class="step-actor">User → Identity Provider</div>
+            <div class="step-title">User Authenticates at the IdP</div>
+            <div class="step-desc">The browser follows the redirect. The user sees the IdP's login page (e.g. Okta). They enter credentials, do MFA, ... whatever the IdP requires.</div>
+            <div class="step-detail">The SP has <em>zero involvement</em> in this step. It never sees the password. The IdP handles the entire authentication process. If the user already has an active IdP session, this step is skipped entirely: <strong>that's the SSO magic!</strong></div>
+          </div>
+        </div>
+
+        <div class="flow-step c-idp" onclick="toggleStep(this)">
+          <div class="step-num">
+            <div class="step-circle">5</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <div class="step-actor">Identity Provider</div>
+            <div class="step-title">Issues a SAML Assertion</div>
+            <div class="step-desc">Authentication succeeds. The IdP creates a signed XML document, the <strong>SAML Assertion</strong>, <em>vouching</em> for the user's identity.</div>
+            <div class="step-detail">The assertion includes: who the user is (NameID), when they authenticated, how long the assertion is valid, their attributes (email, groups, roles), and a digital signature using the IdP's private key. The SP will verify this signature using the IdP's public certificate.</div>
+          </div>
+        </div>
+
+        <div class="flow-step c-idp" onclick="toggleStep(this)">
+          <div class="step-num">
+            <div class="step-circle">6</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <div class="step-actor">Identity Provider → Browser</div>
+            <div class="step-title">POSTs Assertion to SP via Browser</div>
+            <div class="step-desc">The IdP returns an HTML form that auto-submits a POST request back to the SP's <strong>Assertion Consumer Service (ACS) URL</strong>. The browser is the carrier.</div>
+            <div class="step-detail">This is the HTTP-POST binding. The browser acts as a relay: it <em>receives</em> an HTML page containing a hidden form field with the Base64-encoded SAMLResponse, then immediately auto-submits it to the SP. The user barely sees this happen (it's instant).</div>
+          </div>
+        </div>
+
+        <div class="flow-step c-sp" onclick="toggleStep(this)">
+          <div class="step-num">
+            <div class="step-circle">7</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <div class="step-actor">Service Provider</div>
+            <div class="step-title">Validates the Assertion</div>
+            <div class="step-desc">The SP receives the POST, decodes the SAMLResponse, and performs a series of critical security checks.</div>
+            <div class="step-detail">SP checks: ① Signature is valid (using IdP's public cert) ② Assertion hasn't expired ③ Audience matches this SP's entity ID ④ InResponseTo matches the request ID it sent ⑤ NotBefore/NotOnOrAfter timestamps are within tolerance. If any check fails → rejected.</div>
+          </div>
+        </div>
+
+        <div class="flow-step c-done" onclick="toggleStep(this)">
+          <div class="step-num">
+            <div class="step-circle">✓</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <div class="step-actor">Service Provider → User</div>
+            <div class="step-title">Access Granted!</div>
+            <div class="step-desc">The SP creates a local session, extracts user attributes from the assertion, and redirects the user to their original destination (from RelayState).</div>
+            <div class="step-detail">The SP may now provision the user (create an account if first login), assign roles based on group attributes, and set a session cookie. The whole redirect-login-redirect took under 2 seconds. The user never typed a password into Salesforce.</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION 4: KEY CONCEPTS -->
+  <section class="section" id="s4">
+    <div class="section-label">04 — Core Concepts</div>
+    <h2>Key Concepts Explained</h2>
+    <p>Click any card to see a concrete example.</p>
+
+    <div class="concepts-grid">
+      <div class="concept-card" onclick="this.classList.toggle('active')">
+        <div class="concept-tag">Identity</div>
+        <div class="concept-name">NameID</div>
+        <div class="concept-body">The identifier the IdP uses to tell the SP <em>who</em> the user is. Can be an email, a persistent opaque ID, or a transient ID.</div>
+        <div class="concept-example">📧 <strong>emailAddress:</strong> <code>alice@company.com</code><br>🔒 <strong>persistent:</strong> <code>_abc123def456...</code> (opaque, stable)<br>🎲 <strong>transient:</strong> changes every session (privacy)</div>
+      </div>
+
+      <div class="concept-card" onclick="this.classList.toggle('active')">
+        <div class="concept-tag">XML Document</div>
+        <div class="concept-name">Assertion</div>
+        <div class="concept-body">The core payload. Contains three statement types: Authentication (you logged in), Authorization (what you can do), and Attribute (your properties).</div>
+        <div class="concept-example">An assertion might say: "Alice authenticated at 14:30 UTC via MFA, her email is alice@co.com, and she belongs to the 'admins' group."</div>
+      </div>
+
+      <div class="concept-card" onclick="this.classList.toggle('active')">
+        <div class="concept-tag">XML Element</div>
+        <div class="concept-name">Attribute Statement</div>
+        <div class="concept-body">Key-value pairs carried inside the assertion. The SP reads these to learn things about the user beyond just their identity.</div>
+        <div class="concept-example">Common attributes: <code>email</code>, <code>firstName</code>, <code>lastName</code>, <code>groups</code>, <code>department</code>, <code>role</code>. These drive authorization inside the SP.</div>
+      </div>
+
+      <div class="concept-card" onclick="this.classList.toggle('active')">
+        <div class="concept-tag">Security</div>
+        <div class="concept-name">Digital Signature</div>
+        <div class="concept-body">The IdP signs the assertion with its private key. The SP verifies with the IdP's public certificate. This is what makes trust possible.</div>
+        <div class="concept-example">If a man-in-the-middle tampers with the assertion XML, the signature verification will fail. The SP rejects it. No forged assertions possible (if configured correctly).</div>
+      </div>
+
+      <div class="concept-card" onclick="this.classList.toggle('active')">
+        <div class="concept-tag">Config</div>
+        <div class="concept-name">Entity ID</div>
+        <div class="concept-body">A unique URI that identifies each party (SP or IdP). Used to look up metadata. Not necessarily a real URL — just a globally unique string.</div>
+        <div class="concept-example">SP: <code>https://app.salesforce.com</code><br>IdP: <code>https://company.okta.com/app/saml</code></div>
+      </div>
+
+      <div class="concept-card" onclick="this.classList.toggle('active')">
+        <div class="concept-tag">Endpoint</div>
+        <div class="concept-name">ACS URL</div>
+        <div class="concept-body"><strong>Assertion Consumer Service URL</strong>: the SP endpoint that receives the SAML response from the IdP. Must be pre-configured in the IdP to prevent open redirects.</div>
+        <div class="concept-example"><code>https://app.salesforce.com/sso/saml/acs</code>: The IdP will POST the SAMLResponse only to this whitelisted URL.</div>
+      </div>
+
+      <div class="concept-card" onclick="this.classList.toggle('active')">
+        <div class="concept-tag">Security</div>
+        <div class="concept-name">Replay Prevention</div>
+        <div class="concept-body">Each AuthnRequest has a unique ID. The assertion references it. The SP tracks used assertion IDs to prevent the same assertion being submitted twice.</div>
+        <div class="concept-example">Without this, an attacker who intercepts a valid assertion could resubmit it hours later to gain access. The <code>InResponseTo</code> + <code>NotOnOrAfter</code> fields prevent this.</div>
+      </div>
+
+      <div class="concept-card" onclick="this.classList.toggle('active')">
+        <div class="concept-tag">Config</div>
+        <div class="concept-name">Metadata XML</div>
+        <div class="concept-body">Both SP and IdP publish a metadata XML file describing their endpoints, certificates, and capabilities. Exchange of metadata = the trust setup step.</div>
+        <div class="concept-example">Setting up SAML: download IdP metadata → upload to SP. Download SP metadata → upload to IdP. That's the entire trust relationship established.</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION 5: XML -->
+  <section class="section" id="s5">
+    <div class="section-label">05 — The Payload</div>
+    <h2>Anatomy of a SAML Assertion</h2>
+    <p>Here's a simplified (but real) SAML assertion. Every element has a purpose.</p>
+
+    <div class="xml-block">
+      <button class="copy-btn" onclick="copyXml(this)">COPY</button>
+      <pre id="xml-sample"><span class="xml-comment">&lt;!-- The SAML Response wrapper --&gt;</span>
+<span class="xml-tag">&lt;samlp:Response</span> <span class="xml-attr">xmlns:samlp</span>=<span class="xml-val">"urn:oasis:names:tc:SAML:2.0:protocol"</span>
+  <span class="xml-attr">ID</span>=<span class="xml-val">"_unique-response-id"</span>
+  <span class="xml-attr">InResponseTo</span>=<span class="xml-val">"_request-id-from-sp"</span>    <span class="xml-comment">&lt;!-- ties to AuthnRequest --&gt;</span>
+  <span class="xml-attr">IssueInstant</span>=<span class="xml-val">"2024-01-15T14:30:00Z"</span>
+  <span class="xml-attr">Status</span>=<span class="xml-val">"Success"</span><span class="xml-tag">&gt;</span>
+
+  <span class="xml-tag">&lt;saml:Issuer&gt;</span><span class="xml-highlight">https://idp.okta.com/saml</span><span class="xml-tag">&lt;/saml:Issuer&gt;</span>  <span class="xml-comment">&lt;!-- who made this --&gt;</span>
+
+  <span class="xml-comment">&lt;!-- THE CORE ASSERTION --&gt;</span>
+  <span class="xml-tag">&lt;saml:Assertion</span>
+    <span class="xml-attr">ID</span>=<span class="xml-val">"_unique-assertion-id"</span>
+    <span class="xml-attr">IssueInstant</span>=<span class="xml-val">"2024-01-15T14:30:00Z"</span><span class="xml-tag">&gt;</span>
+
+    <span class="xml-comment">&lt;!-- WHO this assertion is about --&gt;</span>
+    <span class="xml-tag">&lt;saml:Subject&gt;</span>
+      <span class="xml-tag">&lt;saml:NameID</span> <span class="xml-attr">Format</span>=<span class="xml-val">"emailAddress"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-highlight">alice@company.com</span>
+      <span class="xml-tag">&lt;/saml:NameID&gt;</span>
+      <span class="xml-tag">&lt;saml:SubjectConfirmation</span>
+        <span class="xml-attr">Recipient</span>=<span class="xml-val">"https://app.salesforce.com/acs"</span>  <span class="xml-comment">&lt;!-- must match ACS URL --&gt;</span>
+        <span class="xml-attr">NotOnOrAfter</span>=<span class="xml-val">"2024-01-15T14:35:00Z"</span><span class="xml-tag">/&gt;</span>  <span class="xml-comment">&lt;!-- expires in 5 min --&gt;</span>
+    <span class="xml-tag">&lt;/saml:Subject&gt;</span>
+
+    <span class="xml-comment">&lt;!-- WHEN it's valid --&gt;</span>
+    <span class="xml-tag">&lt;saml:Conditions</span>
+      <span class="xml-attr">NotBefore</span>=<span class="xml-val">"2024-01-15T14:29:55Z"</span>
+      <span class="xml-attr">NotOnOrAfter</span>=<span class="xml-val">"2024-01-15T14:35:00Z"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;saml:AudienceRestriction&gt;</span>
+        <span class="xml-highlight">https://app.salesforce.com</span>  <span class="xml-comment">&lt;!-- only valid for this SP --&gt;</span>
+      <span class="xml-tag">&lt;/saml:AudienceRestriction&gt;</span>
+    <span class="xml-tag">&lt;/saml:Conditions&gt;</span>
+
+    <span class="xml-comment">&lt;!-- HOW they authenticated --&gt;</span>
+    <span class="xml-tag">&lt;saml:AuthnStatement</span> <span class="xml-attr">AuthnInstant</span>=<span class="xml-val">"2024-01-15T14:30:00Z"</span><span class="xml-tag">&gt;</span>
+      <span class="xml-tag">&lt;saml:AuthnContext&gt;</span>
+        <span class="xml-highlight">PasswordProtectedTransport</span>  <span class="xml-comment">&lt;!-- login method --&gt;</span>
+      <span class="xml-tag">&lt;/saml:AuthnContext&gt;</span>
+    <span class="xml-tag">&lt;/saml:AuthnStatement&gt;</span>
+
+    <span class="xml-comment">&lt;!-- USER ATTRIBUTES --&gt;</span>
+    <span class="xml-tag">&lt;saml:AttributeStatement&gt;</span>
+      <span class="xml-tag">&lt;saml:Attribute</span> <span class="xml-attr">Name</span>=<span class="xml-val">"email"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;saml:AttributeValue&gt;</span><span class="xml-highlight">alice@company.com</span><span class="xml-tag">&lt;/saml:AttributeValue&gt;</span>
+      <span class="xml-tag">&lt;/saml:Attribute&gt;</span>
+      <span class="xml-tag">&lt;saml:Attribute</span> <span class="xml-attr">Name</span>=<span class="xml-val">"groups"</span><span class="xml-tag">&gt;</span>
+        <span class="xml-tag">&lt;saml:AttributeValue&gt;</span><span class="xml-highlight">admins</span><span class="xml-tag">&lt;/saml:AttributeValue&gt;</span>
+        <span class="xml-tag">&lt;saml:AttributeValue&gt;</span><span class="xml-highlight">engineering</span><span class="xml-tag">&lt;/saml:AttributeValue&gt;</span>
+      <span class="xml-tag">&lt;/saml:Attribute&gt;</span>
+    <span class="xml-tag">&lt;/saml:AttributeStatement&gt;</span>
+
+    <span class="xml-comment">&lt;!-- DIGITAL SIGNATURE (IdP's private key) --&gt;</span>
+    <span class="xml-tag">&lt;ds:Signature&gt;</span>...<span class="xml-tag">&lt;/ds:Signature&gt;</span>
+
+  <span class="xml-tag">&lt;/saml:Assertion&gt;</span>
+<span class="xml-tag">&lt;/samlp:Response&gt;</span></pre>
+    </div>
+
+    <div class="callout warn">
+      <span class="callout-icon">⚠️</span>
+      <span>In real life this XML is Base64-encoded and often deflated (compressed). You never see raw XML in the browser. Use tools like <strong>samltool.com</strong> or browser extensions like "SAML Tracer" to decode and inspect it.</span>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION 6: SP vs IdP Initiated -->
+  <section class="section" id="s6">
+    <div class="section-label">06 — Flow Variants</div>
+    <h2>SP-Initiated vs IdP-Initiated</h2>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.25rem 0;">
+      <div class="actor-card" style="border-top:3px solid var(--accent2);">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:0.5rem;">SP-Initiated ← Most Common</div>
+        <div style="font-size:0.88rem;color:var(--muted);margin-bottom:0.75rem;">User starts at the SP. SP sends them to IdP.</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--text);line-height:2;">
+          User → SP<br>
+          SP → (redirect) → IdP<br>
+          IdP → (POST) → SP<br>
+          SP → User ✓
+        </div>
+        <div style="margin-top:0.75rem;font-size:0.82rem;color:var(--muted);">Example: You go to <code>slack.com</code>, click "Sign in with SSO"</div>
+      </div>
+      <div class="actor-card" style="border-top:3px solid var(--accent3);">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:0.5rem;">IdP-Initiated</div>
+        <div style="font-size:0.88rem;color:var(--muted);margin-bottom:0.75rem;">User starts at the IdP dashboard. No AuthnRequest.</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--text);line-height:2;">
+          User → IdP portal<br>
+          User clicks app icon<br>
+          IdP → (POST) → SP<br>
+          SP → User ✓
+        </div>
+        <div style="margin-top:0.75rem;font-size:0.82rem;color:var(--muted);">Example: Okta dashboard → click "Salesforce" tile</div>
+      </div>
+    </div>
+
+    <div class="callout danger">
+      <span class="callout-icon">🔴</span>
+      <span><strong>Security note:</strong> IdP-initiated flow is considered less secure because there's no <code>InResponseTo</code> to match, the SP <strong>can't verify it triggered the request</strong>. This opens potential for unsolicited assertion attacks. Disable IdP-initiated if you don't need it.</span>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION 7: BINDINGS -->
+  <section class="section" id="s7">
+    <div class="section-label">07 — Transport</div>
+    <h2>SAML Bindings</h2>
+    <p>A <em>binding</em> is how SAML messages are transported. Think of it as the envelope type for the XML letter.</p>
+
+    <div class="bindings-grid">
+      <div class="binding-card">
+        <div class="binding-name">HTTP-POST</div>
+        <div><span class="binding-badge badge-common">Most Common</span></div>
+        <div class="binding-desc">SAML response sent via HTML form auto-POST. Used for IdP→SP (the assertion delivery). Data is in form body, <strong>not visible in browser history</strong>.</div>
+      </div>
+      <div class="binding-card">
+        <div class="binding-name">HTTP-Redirect</div>
+        <div><span class="binding-badge badge-common">Common</span></div>
+        <div class="binding-desc">SAML request sent via URL query param (Base64 + deflate). Used for SP→IdP (the AuthnRequest). Size-limited by URL length.</div>
+      </div>
+      <div class="binding-card">
+        <div class="binding-name">HTTP-Artifact</div>
+        <div><span class="binding-badge badge-legacy">Rare</span></div>
+        <div class="binding-desc">A short artifact (reference) is sent via redirect, then SP fetches the real assertion directly from IdP. Avoids large URLs but requires back-channel.</div>
+      </div>
+      <div class="binding-card">
+        <div class="binding-name">SOAP</div>
+        <div><span class="binding-badge badge-legacy">Legacy</span></div>
+        <div class="binding-desc">Server-to-server XML/SOAP. Used for older back-channel communications. Rarely seen in modern setups.</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION 8: COMPARISON -->
+  <section class="section" id="s8">
+    <div class="section-label">08 — Landscape</div>
+    <h2>SAML vs OAuth 2.0 vs OIDC</h2>
+    <p>People confuse these constantly. Here's the clear breakdown:</p>
+
+    <div style="overflow-x:auto;">
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Dimension</th>
+          <th>SAML 2.0</th>
+          <th>OAuth 2.0</th>
+          <th>OIDC</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Primary purpose</strong></td>
+          <td>Authentication + SSO</td>
+          <td>Authorization (API access)</td>
+          <td>Authentication (on top of OAuth)</td>
+        </tr>
+        <tr>
+          <td><strong>Format</strong></td>
+          <td>XML</td>
+          <td>JSON / Tokens</td>
+          <td>JWT (JSON)</td>
+        </tr>
+        <tr>
+          <td><strong>Era</strong></td>
+          <td>2005 — Enterprise</td>
+          <td>2012 — Web/API</td>
+          <td>2014 — Modern Web</td>
+        </tr>
+        <tr>
+          <td><strong>Typical use</strong></td>
+          <td>Corporate SSO, legacy apps</td>
+          <td>"Login with Google" API access</td>
+          <td>Consumer apps, SPAs, mobile</td>
+        </tr>
+        <tr>
+          <td><strong>Mobile friendly</strong></td>
+          <td class="no">✗ (browser-centric)</td>
+          <td class="yes">✓</td>
+          <td class="yes">✓</td>
+        </tr>
+        <tr>
+          <td><strong>Carries user attributes</strong></td>
+          <td class="yes">✓ Rich</td>
+          <td class="no">✗ (not its job)</td>
+          <td class="partial">~ (ID Token)</td>
+        </tr>
+        <tr>
+          <td><strong>Complexity</strong></td>
+          <td>High (XML, certs)</td>
+          <td>Medium</td>
+          <td>Medium-Low</td>
+        </tr>
+        <tr>
+          <td><strong>Where you'll see it</strong></td>
+          <td>Salesforce, Workday, enterprise apps</td>
+          <td>API integrations, social login</td>
+          <td>Auth0, Google Sign-In, modern apps</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="analogy-card">
+      <strong>🎯 Quick Distinction</strong><br><br>
+      <strong>OAuth:</strong> "App X wants to read your Google Calendar on your behalf. Allow?" — It's about <strong>delegating API access</strong>.<br><br>
+      <strong>OIDC:</strong> "Sign in with Google" — It's about knowing <em>who you are</em> using OAuth infrastructure.<br><br>
+      <strong>SAML:</strong> "Your company uses Okta. Log into Salesforce using your Okta account" — It's about <strong>enterprise SSO across applications</strong>.
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION 9: PITFALLS -->
+  <section class="section" id="s9">
+    <div class="section-label">09 — Watch Out</div>
+    <h2>Common Pitfalls & Security Gotchas</h2>
+
+    <div class="callout danger">
+      <span class="callout-icon">🔴</span>
+      <div><strong>Clock Skew</strong> — SAML assertions have strict timestamps. If the SP and IdP clocks differ by more than a few minutes, valid assertions will be rejected. Always sync clocks via NTP.</div>
+    </div>
+
+    <div class="callout danger">
+      <span class="callout-icon">🔴</span>
+      <div><strong>Signature Not Validated</strong> — Some misconfigured SPs don't enforce signature validation. An attacker can forge arbitrary assertions. Always require signed assertions AND responses.</div>
+    </div>
+
+    <div class="callout warn">
+      <span class="callout-icon">⚠️</span>
+      <div><strong>XML Signature Wrapping (XSW)</strong> — A sophisticated attack where an attacker inserts a second unsigned assertion and tricks the SP into validating the wrong element. Use well-tested SAML libraries, never roll your own XML parsing.</div>
+    </div>
+
+    <div class="callout warn">
+      <span class="callout-icon">⚠️</span>
+      <div><strong>Audience Not Checked</strong> — If SP doesn't verify that the assertion's <code>Audience</code> matches its own Entity ID, an assertion meant for App A could be used to log into App B.</div>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">ℹ️</span>
+      <div><strong>Certificate Rotation</strong> — When the IdP rotates its signing certificate, all SPs must update their trusted cert. Forgetting this causes sudden SSO outages for every connected app simultaneously.</div>
+    </div>
+
+    <div class="callout success">
+      <span class="callout-icon">✅</span>
+      <div><strong>Best Practice</strong> — Encrypt the assertion (not just sign it). Signing proves integrity; encryption ensures the IdP's message can only be read by the intended SP. Use AES-256 for encryption.</div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- SECTION 10: QUIZ -->
+  <section class="section" id="s10">
+    <div class="section-label">10 — Test Yourself</div>
+    <h2>Quick Quiz</h2>
+
+    <div class="quiz-section">
+      <div id="quiz-container"></div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+// Intersection Observer for scroll animations
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.section').forEach(s => observer.observe(s));
+
+// Toggle flow steps
+function toggleStep(el) {
+  const detail = el.querySelector('.step-detail');
+  detail.classList.toggle('open');
+}
+
+// Copy XML
+function copyXml(btn) {
+  const pre = document.getElementById('xml-sample');
+  const text = pre.innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'COPIED!';
+    setTimeout(() => btn.textContent = 'COPY', 2000);
+  });
+}
+
+// QUIZ
+const questions = [
+  {
+    q: "What does the SP send to start the SP-initiated SAML flow?",
+    opts: ["A SAMLResponse with the user's credentials", "An AuthnRequest redirecting the user to the IdP", "A signed JWT token", "A SOAP request to the IdP"],
+    ans: 1,
+    exp: "Correct! The SP generates an AuthnRequest and redirects the user's browser to the IdP's SSO URL. The SP never handles credentials."
+  },
+  {
+    q: "What is the Assertion Consumer Service (ACS) URL?",
+    opts: ["The IdP's login page URL", "A URL where the SP receives the SAML assertion via POST", "The SP's metadata endpoint", "The logout URL"],
+    ans: 1,
+    exp: "Exactly! The ACS URL is the SP endpoint that receives the POSTed SAMLResponse from the IdP. It must be whitelisted in the IdP config."
+  },
+  {
+    q: "Why is digital signing critical in SAML?",
+    opts: ["It compresses the XML to save bandwidth", "It proves the assertion came from the trusted IdP and hasn't been tampered with", "It encrypts the user's password", "It generates the NameID format"],
+    ans: 1,
+    exp: "Right! The IdP signs with its private key; the SP verifies with the IdP's public certificate. This is the entire basis of trust."
+  },
+  {
+    q: "What does 'RelayState' carry?",
+    opts: ["The user's session token", "The IdP's entity ID", "The original URL the user wanted to visit", "The SAML version number"],
+    ans: 2,
+    exp: "Yes! RelayState remembers where the user was going before the SSO redirect, so they land on the right page after login."
+  },
+  {
+    q: "IdP-initiated flow is considered less secure than SP-initiated because...",
+    opts: ["It uses HTTP instead of HTTPS", "There's no AuthnRequest, so the SP can't verify it triggered the flow (no InResponseTo)", "The assertion isn't signed", "It doesn't support attribute statements"],
+    ans: 1,
+    exp: "Correct! Without an AuthnRequest, the SP can't confirm it requested this assertion, opening the door to unsolicited assertion attacks."
+  },
+  {
+    q: "What attack does the 'AudienceRestriction' element help prevent?",
+    opts: ["SQL injection", "Using an assertion meant for App A to log into App B", "Brute force on the IdP", "Certificate forgery"],
+    ans: 1,
+    exp: "Exactly! AudienceRestriction ties the assertion to a specific SP entity ID. Without it, a stolen assertion could grant access to other apps."
+  }
+];
+
+let current = 0, score = 0, answered = false;
+
+function renderQuiz() {
+  const q = questions[current];
+  document.getElementById('quiz-container').innerHTML = `
+    <div class="quiz-q">Q${current + 1}/${questions.length}: ${q.q}</div>
+    <div class="quiz-options">
+      ${q.opts.map((o, i) => `<div class="quiz-opt" onclick="answer(${i})">${o}</div>`).join('')}
+    </div>
+    <div class="quiz-feedback" id="qfb"></div>
+    <div class="quiz-nav">
+      <button class="btn btn-primary" onclick="nextQ()" id="nextBtn" style="display:none">Next →</button>
+      <span class="quiz-counter">Score: ${score}/${current} ${current > 0 ? '·' : ''} ${current > 0 ? Math.round(score/current*100) + '%' : ''}</span>
+    </div>
+  `;
+  answered = false;
+}
+
+function answer(i) {
+  if (answered) return;
+  answered = true;
+  const q = questions[current];
+  const opts = document.querySelectorAll('.quiz-opt');
+  const fb = document.getElementById('qfb');
+  opts.forEach((o, idx) => {
+    if (idx === q.ans) o.classList.add('correct');
+    else if (idx === i && i !== q.ans) o.classList.add('wrong');
+  });
+  if (i === q.ans) { score++; fb.innerHTML = `✅ ${q.exp}`; }
+  else { fb.innerHTML = `❌ ${q.exp}`; }
+  document.getElementById('nextBtn').style.display = 'inline-block';
+}
+
+function nextQ() {
+  current++;
+  if (current >= questions.length) {
+    const pct = Math.round(score / questions.length * 100);
+    document.getElementById('quiz-container').innerHTML = `
+      <div style="text-align:center;padding:2rem 0;">
+        <div style="font-size:3rem;margin-bottom:0.75rem">${pct >= 80 ? '🎉' : pct >= 60 ? '💪' : '📚'}</div>
+        <div style="font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:#fff;margin-bottom:0.5rem">
+          ${score}/${questions.length} — ${pct}%
+        </div>
+        <div style="color:var(--muted);margin-bottom:1.5rem">
+          ${pct >= 80 ? "You've got SAML down!" : pct >= 60 ? "Good progress — review the flow again!" : "Go back through the sections and try again!"}
+        </div>
+        <button class="btn btn-primary" onclick="current=0;score=0;renderQuiz()">Retry Quiz</button>
+      </div>
+    `;
+  } else {
+    renderQuiz();
+  }
+}
+
+renderQuiz();
+</script>
+</body>
+</html>

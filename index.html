@@ -339,82 +339,102 @@
 
   <div class="grid" id="grid">
 
-    <a class="card" href="./privilege-escalation/"
-       style="--c1:#ef4444;--c2:#f97316"
-       data-tags="linux privesc sudo suid capabilities kernel exploit">
-      <div class="card-icon">🔺</div>
-      <div>
-        <div class="card-tag" style="background:rgba(239,68,68,0.1);color:#f87171;">Privilege Escalation</div>
-        <h2>Linux Privesc</h2>
-      </div>
-      <p>SUID, sudo misconfigs, capabilities, cron jobs, writable paths, kernel exploits — the full methodology.</p>
-      <div class="card-meta">
-        <span>32 concepts · 10 quiz Qs</span>
-        <span class="card-difficulty diff-medium">medium</span>
-      </div>
-    </a>
+  <!-- ── Active Sheets ─────────────────────────────────────────────── -->
+  <div class="section-label" style="grid-column:1/-1">active</div>
 
-    <a class="card" href="./active-directory/"
-       style="--c1:#6366f1;--c2:#8b5cf6"
-       data-tags="active directory ad kerberos bloodhound mimikatz pass the hash golden ticket">
-      <div class="card-icon">🏰</div>
-      <div>
-        <div class="card-tag" style="background:rgba(99,102,241,0.1);color:#a5b4fc;">Active Directory</div>
-        <h2>AD Attack Paths</h2>
-      </div>
-      <p>Kerberoasting, AS-REP, Pass-the-Hash, DCSync, BloodHound enumeration and lateral movement chains.</p>
-      <div class="card-meta">
-        <span>28 concepts · 10 quiz Qs</span>
-        <span class="card-difficulty diff-advanced">advanced</span>
-      </div>
-    </a>
+  <a class="card" href="./linux-privilege-escalation/"
+     style="--c1:#ef4444;--c2:#f97316"
+     data-tags="linux privesc sudo suid capabilities kernel exploit cron writable path">
+    <div class="card-icon">🔺</div>
+    <div>
+      <div class="card-tag" style="background:rgba(239,68,68,0.1);color:#f87171;">Privilege Escalation</div>
+      <h2>Linux Privesc</h2>
+    </div>
+    <p>SUID, sudo misconfigs, capabilities, cron jobs, writable paths, kernel exploits — the full methodology.</p>
+    <div class="card-meta">
+      <span>32 concepts · 10 quiz Qs</span>
+      <span class="card-difficulty diff-medium">medium</span>
+    </div>
+  </a>
 
-    <a class="card" href="./web-exploitation/"
-       style="--c1:#0ea5e9;--c2:#06b6d4"
-       data-tags="web xss sqli lfi xxe deserialization command injection burp">
-      <div class="card-icon">🌐</div>
-      <div>
-        <div class="card-tag" style="background:rgba(14,165,233,0.1);color:#7dd3fc;">Web Security</div>
-        <h2>Web Exploitation</h2>
-      </div>
-      <p>XSS, SQLi, LFI/RFI, XXE, SSRF, command injection, deserialization — with payloads and bypass techniques.</p>
-      <div class="card-meta">
-        <span>40 concepts · 10 quiz Qs</span>
-        <span class="card-difficulty diff-medium">medium</span>
-      </div>
-    </a>
+  <a class="card" href="./ssti/"
+     style="--c1:#f59e0b;--c2:#ef4444"
+     data-tags="ssti server side template injection jinja2 twig freemarker flask django rce">
+    <div class="card-icon">🧩</div>
+    <div>
+      <div class="card-tag" style="background:rgba(245,158,11,0.1);color:#fcd34d;">Web Security</div>
+      <h2>SSTI</h2>
+    </div>
+    <p>Server-side template injection in Jinja2, Twig, Freemarker — detection, payloads, and RCE chains.</p>
+    <div class="card-meta">
+      <span>20 concepts · 10 quiz Qs</span>
+      <span class="card-difficulty diff-medium">medium</span>
+    </div>
+  </a>
 
-    <a class="card" href="./linux-fundamentals/"
-       style="--c1:#22c55e;--c2:#10b981"
-       data-tags="linux bash shell cli grep awk sed find permissions networking">
-      <div class="card-icon">🐧</div>
-      <div>
-        <div class="card-tag" style="background:rgba(34,197,94,0.1);color:#4ade80;">Linux</div>
-        <h2>Linux Fundamentals</h2>
-      </div>
-      <p>CLI essentials, file permissions, process management, networking commands, and shell scripting basics.</p>
-      <div class="card-meta">
-        <span>35 concepts · 10 quiz Qs</span>
-        <span class="card-difficulty diff-beginner">beginner</span>
-      </div>
-    </a>
+  <a class="card" href="./xxe/"
+     style="--c1:#0ea5e9;--c2:#06b6d4"
+     data-tags="xxe xml external entity injection file read ssrf blind oob">
+    <div class="card-icon">📄</div>
+    <div>
+      <div class="card-tag" style="background:rgba(14,165,233,0.1);color:#7dd3fc;">Web Security</div>
+      <h2>XXE Injection</h2>
+    </div>
+    <p>XML external entity attacks — file read, SSRF, blind/OOB exfiltration, and WAF bypass techniques.</p>
+    <div class="card-meta">
+      <span>22 concepts · 10 quiz Qs</span>
+      <span class="card-difficulty diff-medium">medium</span>
+    </div>
+  </a>
 
-    <a class="card" href="./ctf-methodology/"
-       style="--c1:#f59e0b;--c2:#ef4444"
-       data-tags="ctf methodology enumeration recon nmap gobuster ffuf hack the box">
-      <div class="card-icon">🚩</div>
-      <div>
-        <div class="card-tag" style="background:rgba(245,158,11,0.1);color:#fcd34d;">CTF</div>
-        <h2>CTF Methodology</h2>
-      </div>
-      <p>Systematic enumeration workflow, tool chaining, common CTF patterns, and HTB/THM approach guides.</p>
-      <div class="card-meta">
-        <span>25 concepts · 10 quiz Qs</span>
-        <span class="card-difficulty diff-beginner">beginner</span>
-      </div>
-    </a>
+  <a class="card" href="./saml/"
+     style="--c1:#8b5cf6;--c2:#6366f1"
+     data-tags="saml sso single sign on xml signature wrapping authentication bypass">
+    <div class="card-icon">🔐</div>
+    <div>
+      <div class="card-tag" style="background:rgba(139,92,246,0.1);color:#c4b5fd;">Auth & Identity</div>
+      <h2>SAML Attacks</h2>
+    </div>
+    <p>Signature wrapping, XML injection, authentication bypass, and common SSO misconfigurations.</p>
+    <div class="card-meta">
+      <span>18 concepts · 10 quiz Qs</span>
+      <span class="card-difficulty diff-advanced">advanced</span>
+    </div>
+  </a>
 
-  </div>
+  <a class="card" href="./jwts/"
+     style="--c1:#22c55e;--c2:#0ea5e9"
+     data-tags="jwt json web token alg none signature bypass claims hs256 rs256">
+    <div class="card-icon">🪙</div>
+    <div>
+      <div class="card-tag" style="background:rgba(34,197,94,0.1);color:#4ade80;">Auth & Identity</div>
+      <h2>JWT Attacks</h2>
+    </div>
+    <p>Algorithm confusion, alg:none bypass, weak secrets, claim manipulation — and how to test all of it.</p>
+    <div class="card-meta">
+      <span>20 concepts · 10 quiz Qs</span>
+      <span class="card-difficulty diff-medium">medium</span>
+    </div>
+  </a>
+
+  <!-- ── CVEs & Specific Vulns ──────────────────────────────────────── -->
+  <div class="section-label" style="grid-column:1/-1;margin-top:16px;">cves & specific vulns</div>
+
+  <a class="card" href="./cve/samlstorm/"
+     style="--c1:#ef4444;--c2:#8b5cf6"
+     data-tags="samlstorm cve saml ruby omniauth authentication bypass critical">
+    <div class="card-icon">⚡</div>
+    <div>
+      <div class="card-tag" style="background:rgba(239,68,68,0.1);color:#f87171;">CVE Deep-Dive</div>
+      <h2>SAMLStorm</h2>
+    </div>
+    <p>Critical authentication bypass in ruby-saml — how it works, what's exploitable, and how to patch.</p>
+    <div class="card-meta">
+      <span>deep-dive · quiz incoming</span>
+      <span class="card-difficulty diff-advanced">advanced</span>
+    </div>
+  </a>
+
 </div>
 
 <footer>

