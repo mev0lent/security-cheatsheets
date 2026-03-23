@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://learn.niklas-heringer.com/</loc><priority>1.0</priority></url>
+  <url><loc>https://learn.niklas-heringer.com/linux-privilege-escalation/</loc><priority>0.8</priority></url>
+  <url><loc>https://learn.niklas-heringer.com/ssti/</loc><priority>0.8</priority></url>
+  <url><loc>https://learn.niklas-heringer.com/xxe/</loc><priority>0.8</priority></url>
+  <url><loc>https://learn.niklas-heringer.com/saml/</loc><priority>0.8</priority></url>
+  <url><loc>https://learn.niklas-heringer.com/sessions/</loc><priority>0.8</priority></url>
+  <url><loc>https://learn.niklas-heringer.com/cve/samlstorm/</loc><priority>0.8</priority></url>
+</urlset>
