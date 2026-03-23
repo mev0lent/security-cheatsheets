@@ -11,17 +11,17 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg:        #080f1a;
-    --bg2:       #0d1b2e;
-    --bg3:       #0f2744;
-    --border:    #1e3a5f;
-    --accent:    #0ea5e9;
-    --accent2:   #6366f1;
-    --text:      #e2e8f0;
-    --muted:     #64748b;
-    --muted2:    #94a3b8;
-    --mono:      'JetBrains Mono', monospace;
-    --sans:      'DM Sans', sans-serif;
+    --bg:     #080f1a;
+    --bg2:    #0d1b2e;
+    --bg3:    #0f2744;
+    --border: #1e3a5f;
+    --accent: #0ea5e9;
+    --accent2:#6366f1;
+    --text:   #e2e8f0;
+    --muted:  #64748b;
+    --muted2: #94a3b8;
+    --mono:   'JetBrains Mono', monospace;
+    --sans:   'DM Sans', sans-serif;
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -35,7 +35,6 @@
     min-height: 100vh;
   }
 
-  /* noise texture overlay */
   body::before {
     content: '';
     position: fixed;
@@ -45,7 +44,6 @@
     z-index: 0;
   }
 
-  /* grid background */
   body::after {
     content: '';
     position: fixed;
@@ -99,10 +97,7 @@
   .nav-back:hover { color: var(--accent); border-color: var(--accent); }
 
   /* ── HERO ── */
-  .hero {
-    padding: 80px 0 64px;
-    text-align: center;
-  }
+  .hero { padding: 64px 0 48px; text-align: center; }
   .hero-tag {
     display: inline-block;
     font-family: var(--mono);
@@ -133,33 +128,15 @@
     margin: 0 auto 40px;
     font-weight: 300;
   }
-  .hero-stats {
-    display: flex;
-    justify-content: center;
-    gap: 40px;
-    flex-wrap: wrap;
-  }
-  .stat {
-    text-align: center;
-  }
-  .stat-num {
-    font-family: var(--mono);
-    font-size: 28px;
-    font-weight: 700;
-    color: var(--accent);
-    display: block;
-  }
-  .stat-label {
-    font-size: 12px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
+  .hero-stats { display: flex; justify-content: center; gap: 40px; flex-wrap: wrap; }
+  .stat { text-align: center; }
+  .stat-num { font-family: var(--mono); font-size: 28px; font-weight: 700; color: var(--accent); display: block; }
+  .stat-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
 
   /* ── SEARCH ── */
   .search-wrap {
     max-width: 480px;
-    margin: 48px auto 56px;
+    margin: 40px auto 0;
     position: relative;
   }
   .search-wrap input {
@@ -186,25 +163,91 @@
     pointer-events: none;
   }
 
-  /* ── GRID ── */
-  .section-label {
+  /* ── FILTER TABS ── */
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 28px 0 8px;
+  }
+  .filter-btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 5px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.04em;
+  }
+  .filter-btn:hover { color: var(--text); border-color: var(--muted2); }
+  .filter-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .filter-btn[data-filter="project-management"].active { background: #10b981; border-color: #10b981; }
+  .filter-btn[data-filter="web-security"].active       { background: #0ea5e9; border-color: #0ea5e9; }
+  .filter-btn[data-filter="auth"].active               { background: #8b5cf6; border-color: #8b5cf6; }
+  .filter-btn[data-filter="linux"].active              { background: #ef4444; border-color: #ef4444; }
+  .filter-btn[data-filter="cve"].active                { background: #f59e0b; border-color: #f59e0b; }
+
+  /* ── CATEGORY SECTION ── */
+  .cat-section { margin-bottom: 12px; }
+
+  .cat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0 10px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0;
+    user-select: none;
+  }
+  .cat-header:hover .cat-title { color: var(--accent); }
+
+  .cat-left { display: flex; align-items: center; gap: 10px; }
+
+  .cat-title {
     font-family: var(--mono);
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.12em;
     color: var(--muted);
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--border);
+    transition: color 0.2s;
   }
+  .cat-count {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    padding: 1px 7px;
+    border-radius: 10px;
+  }
+  .cat-chevron {
+    font-size: 10px;
+    color: var(--muted);
+    transition: transform 0.25s ease;
+  }
+  .cat-section.collapsed .cat-chevron { transform: rotate(-90deg); }
 
-  .grid {
+  .cat-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 16px;
-    margin-bottom: 64px;
+    padding: 16px 0 24px;
+    overflow: hidden;
+    transition: grid-template-rows 0.3s ease, opacity 0.25s ease;
+  }
+  .cat-section.collapsed .cat-grid {
+    display: none;
   }
 
+  /* ── CARDS ── */
   .card {
     background: var(--bg2);
     border: 1px solid var(--border);
@@ -230,10 +273,7 @@
   .card:hover { border-color: var(--accent); transform: translateY(-2px); background: var(--bg3); }
   .card:hover::before { opacity: 1; }
 
-  .card-icon {
-    font-size: 28px;
-    line-height: 1;
-  }
+  .card-icon { font-size: 28px; line-height: 1; }
   .card-tag {
     display: inline-block;
     font-family: var(--mono);
@@ -275,9 +315,22 @@
     font-weight: 600;
     text-transform: uppercase;
   }
-  .diff-beginner  { background: rgba(34,197,94,0.12);  color: #4ade80; }
-  .diff-medium    { background: rgba(251,191,36,0.12);  color: #fbbf24; }
-  .diff-advanced  { background: rgba(239,68,68,0.12);   color: #f87171; }
+  .diff-beginner { background: rgba(34,197,94,0.12);  color: #4ade80; }
+  .diff-medium   { background: rgba(251,191,36,0.12);  color: #fbbf24; }
+  .diff-advanced { background: rgba(239,68,68,0.12);   color: #f87171; }
+
+  .card.hidden-filter { display: none; }
+
+  /* empty state */
+  .empty-state {
+    display: none;
+    text-align: center;
+    padding: 48px 0;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .empty-state.show { display: block; }
 
   /* ── FOOTER ── */
   footer {
@@ -295,13 +348,7 @@
     from { opacity: 0; transform: translateY(16px); }
     to   { opacity: 1; transform: translateY(0); }
   }
-  .card { animation: fadeUp 0.4s ease both; }
-  .card:nth-child(1) { animation-delay: 0.05s; }
-  .card:nth-child(2) { animation-delay: 0.10s; }
-  .card:nth-child(3) { animation-delay: 0.15s; }
-  .card:nth-child(4) { animation-delay: 0.20s; }
-  .card:nth-child(5) { animation-delay: 0.25s; }
-  .card:nth-child(6) { animation-delay: 0.30s; }
+  .card { animation: fadeUp 0.35s ease both; }
 
   .hidden { display: none !important; }
 </style>
@@ -310,7 +357,7 @@
 
 <nav>
   <div class="nav-inner">
-    <a class="nav-logo" href="/">learn<span>.niklas-heringer.com</span></a>
+    <a class="nav-logo" href="https://learn.niklas-heringer.com">learn<span>.niklas-heringer.com</span></a>
     <a class="nav-back" href="https://niklas-heringer.com" target="_blank">← back to blog</a>
   </div>
 </nav>
@@ -324,118 +371,199 @@
     </h1>
     <p>Hands-on reference sheets with interactive quizzes. No fluff — just the commands, concepts, and techniques you need.</p>
     <div class="hero-stats">
-      <div class="stat"><span class="stat-num">5</span><span class="stat-label">Cheatsheets</span></div>
+      <div class="stat"><span class="stat-num" id="stat-sheets">6</span><span class="stat-label">Cheatsheets</span></div>
       <div class="stat"><span class="stat-num">50+</span><span class="stat-label">Quiz questions</span></div>
       <div class="stat"><span class="stat-num">100%</span><span class="stat-label">Free</span></div>
     </div>
   </section>
 
+  <!-- SEARCH -->
   <div class="search-wrap">
     <span class="search-icon">⌕</span>
-    <input type="text" id="search" placeholder="search topics..." autocomplete="off">
+    <input type="text" id="search" placeholder="search topics, techniques, tools..." autocomplete="off">
   </div>
 
-  <div class="section-label">topics</div>
-
-  <div class="grid" id="grid">
-
-  <!-- ── Active Sheets ─────────────────────────────────────────────── -->
-  <div class="section-label" style="grid-column:1/-1">active</div>
-
-  <a class="card" href="./linux-privilege-escalation/"
-     style="--c1:#ef4444;--c2:#f97316"
-     data-tags="linux privesc sudo suid capabilities kernel exploit cron writable path">
-    <div class="card-icon">🔺</div>
-    <div>
-      <div class="card-tag" style="background:rgba(239,68,68,0.1);color:#f87171;">Privilege Escalation</div>
-      <h2>Linux Privesc</h2>
-    </div>
-    <p>SUID, sudo misconfigs, capabilities, cron jobs, writable paths, kernel exploits — the full methodology.</p>
-    <div class="card-meta">
-      <span>32 concepts · 10 quiz Qs</span>
-      <span class="card-difficulty diff-medium">medium</span>
-    </div>
-  </a>
-
-  <a class="card" href="./ssti/"
-     style="--c1:#f59e0b;--c2:#ef4444"
-     data-tags="ssti server side template injection jinja2 twig freemarker flask django rce">
-    <div class="card-icon">🧩</div>
-    <div>
-      <div class="card-tag" style="background:rgba(245,158,11,0.1);color:#fcd34d;">Web Security</div>
-      <h2>SSTI</h2>
-    </div>
-    <p>Server-side template injection in Jinja2, Twig, Freemarker — detection, payloads, and RCE chains.</p>
-    <div class="card-meta">
-      <span>20 concepts · 10 quiz Qs</span>
-      <span class="card-difficulty diff-medium">medium</span>
-    </div>
-  </a>
-
-  <a class="card" href="./xxe/"
-     style="--c1:#0ea5e9;--c2:#06b6d4"
-     data-tags="xxe xml external entity injection file read ssrf blind oob">
-    <div class="card-icon">📄</div>
-    <div>
-      <div class="card-tag" style="background:rgba(14,165,233,0.1);color:#7dd3fc;">Web Security</div>
-      <h2>XXE Injection</h2>
-    </div>
-    <p>XML external entity attacks — file read, SSRF, blind/OOB exfiltration, and WAF bypass techniques.</p>
-    <div class="card-meta">
-      <span>22 concepts · 10 quiz Qs</span>
-      <span class="card-difficulty diff-medium">medium</span>
-    </div>
-  </a>
-
-  <a class="card" href="./saml/"
-     style="--c1:#8b5cf6;--c2:#6366f1"
-     data-tags="saml sso single sign on xml signature wrapping authentication bypass">
-    <div class="card-icon">🔐</div>
-    <div>
-      <div class="card-tag" style="background:rgba(139,92,246,0.1);color:#c4b5fd;">Auth & Identity</div>
-      <h2>SAML Attacks</h2>
-    </div>
-    <p>Signature wrapping, XML injection, authentication bypass, and common SSO misconfigurations.</p>
-    <div class="card-meta">
-      <span>18 concepts · 10 quiz Qs</span>
-      <span class="card-difficulty diff-advanced">advanced</span>
-    </div>
-  </a>
-
-  <a class="card" href="./sessions/"
-   style="--c1:#f59e0b;--c2:#22c55e"
-   data-tags="jwt json web token session cookie auth token alg none signature bypass claims hs256 rs256 session fixation hijacking storage">
-  <div class="card-icon">🔑</div>
-  <div>
-    <div class="card-tag" style="background:rgba(245,158,11,0.1);color:#fcd34d;">Auth & Identity</div>
-    <h2>Sessions & Auth Tokens</h2>
+  <!-- FILTER BAR -->
+  <div class="filter-bar">
+    <button class="filter-btn active" data-filter="all">all</button>
+    <button class="filter-btn" data-filter="web-security">web security</button>
+    <button class="filter-btn" data-filter="linux">linux</button>
+    <button class="filter-btn" data-filter="auth">auth & identity</button>
+    <button class="filter-btn" data-filter="cve">cves</button>
+    <button class="filter-btn" data-filter="project-management">project management</button>
   </div>
-  <p>JWT attacks, session fixation, cookie security, token storage mistakes — the full picture of broken auth.</p>
-  <div class="card-meta">
-    <span>25 concepts · 10 quiz Qs</span>
-    <span class="card-difficulty diff-medium">medium</span>
+
+  <!-- ── CATEGORY: Web Security ── -->
+  <div class="cat-section" data-category="web-security">
+    <div class="cat-header" onclick="toggleCat(this)">
+      <div class="cat-left">
+        <span class="cat-title">web security</span>
+        <span class="cat-count">3</span>
+      </div>
+      <span class="cat-chevron">▼</span>
+    </div>
+    <div class="cat-grid">
+
+      <a class="card" href="./ssti/"
+         style="--c1:#f59e0b;--c2:#ef4444"
+         data-tags="ssti server side template injection jinja2 twig freemarker flask django rce"
+         data-category="web-security">
+        <div class="card-icon">🧩</div>
+        <div>
+          <div class="card-tag" style="background:rgba(245,158,11,0.1);color:#fcd34d;">Web Security</div>
+          <h2>SSTI</h2>
+        </div>
+        <p>Server-side template injection in Jinja2, Twig, Freemarker — detection, payloads, and RCE chains.</p>
+        <div class="card-meta">
+          <span>20 concepts · 10 quiz Qs</span>
+          <span class="card-difficulty diff-medium">medium</span>
+        </div>
+      </a>
+
+      <a class="card" href="./xxe/"
+         style="--c1:#0ea5e9;--c2:#06b6d4"
+         data-tags="xxe xml external entity injection file read ssrf blind oob"
+         data-category="web-security">
+        <div class="card-icon">📄</div>
+        <div>
+          <div class="card-tag" style="background:rgba(14,165,233,0.1);color:#7dd3fc;">Web Security</div>
+          <h2>XXE Injection</h2>
+        </div>
+        <p>XML external entity attacks — file read, SSRF, blind/OOB exfiltration, and WAF bypass techniques.</p>
+        <div class="card-meta">
+          <span>22 concepts · 10 quiz Qs</span>
+          <span class="card-difficulty diff-medium">medium</span>
+        </div>
+      </a>
+
+      <a class="card" href="./saml/"
+         style="--c1:#8b5cf6;--c2:#6366f1"
+         data-tags="saml sso single sign on xml signature wrapping authentication bypass"
+         data-category="web-security">
+        <div class="card-icon">🔐</div>
+        <div>
+          <div class="card-tag" style="background:rgba(139,92,246,0.1);color:#c4b5fd;">Web Security</div>
+          <h2>SAML Attacks</h2>
+        </div>
+        <p>Signature wrapping, XML injection, authentication bypass, and common SSO misconfigurations.</p>
+        <div class="card-meta">
+          <span>18 concepts · 10 quiz Qs</span>
+          <span class="card-difficulty diff-advanced">advanced</span>
+        </div>
+      </a>
+
+    </div>
   </div>
-</a>
 
-  <!-- ── CVEs & Specific Vulns ──────────────────────────────────────── -->
-  <div class="section-label" style="grid-column:1/-1;margin-top:16px;">cves & specific vulns</div>
-
-  <a class="card" href="./cve/samlstorm/"
-     style="--c1:#ef4444;--c2:#8b5cf6"
-     data-tags="samlstorm cve saml ruby omniauth authentication bypass critical">
-    <div class="card-icon">⚡</div>
-    <div>
-      <div class="card-tag" style="background:rgba(239,68,68,0.1);color:#f87171;">CVE Deep-Dive</div>
-      <h2>SAMLStorm</h2>
+  <!-- ── CATEGORY: Linux ── -->
+  <div class="cat-section" data-category="linux">
+    <div class="cat-header" onclick="toggleCat(this)">
+      <div class="cat-left">
+        <span class="cat-title">linux</span>
+        <span class="cat-count">1</span>
+      </div>
+      <span class="cat-chevron">▼</span>
     </div>
-    <p>Critical authentication bypass in ruby-saml — how it works, what's exploitable, and how to patch.</p>
-    <div class="card-meta">
-      <span>deep-dive · quiz incoming</span>
-      <span class="card-difficulty diff-advanced">advanced</span>
-    </div>
-  </a>
+    <div class="cat-grid">
 
-</div>
+      <a class="card" href="./linux-privilege-escalation/"
+         style="--c1:#ef4444;--c2:#f97316"
+         data-tags="linux privesc sudo suid capabilities kernel exploit cron writable path"
+         data-category="linux">
+        <div class="card-icon">🔺</div>
+        <div>
+          <div class="card-tag" style="background:rgba(239,68,68,0.1);color:#f87171;">Privilege Escalation</div>
+          <h2>Linux Privesc</h2>
+        </div>
+        <p>SUID, sudo misconfigs, capabilities, cron jobs, writable paths, kernel exploits — the full methodology.</p>
+        <div class="card-meta">
+          <span>32 concepts · 10 quiz Qs</span>
+          <span class="card-difficulty diff-medium">medium</span>
+        </div>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- ── CATEGORY: Auth & Identity ── -->
+  <div class="cat-section" data-category="auth">
+    <div class="cat-header" onclick="toggleCat(this)">
+      <div class="cat-left">
+        <span class="cat-title">auth & identity</span>
+        <span class="cat-count">1</span>
+      </div>
+      <span class="cat-chevron">▼</span>
+    </div>
+    <div class="cat-grid">
+
+      <a class="card" href="./sessions/"
+         style="--c1:#f59e0b;--c2:#22c55e"
+         data-tags="jwt json web token session cookie auth token alg none signature bypass claims hs256 rs256 session fixation hijacking storage"
+         data-category="auth">
+        <div class="card-icon">🔑</div>
+        <div>
+          <div class="card-tag" style="background:rgba(245,158,11,0.1);color:#fcd34d;">Auth & Identity</div>
+          <h2>Sessions & Auth Tokens</h2>
+        </div>
+        <p>JWT attacks, session fixation, cookie security, token storage mistakes — the full picture of broken auth.</p>
+        <div class="card-meta">
+          <span>25 concepts · 10 quiz Qs</span>
+          <span class="card-difficulty diff-medium">medium</span>
+        </div>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- ── CATEGORY: CVEs ── -->
+  <div class="cat-section" data-category="cve">
+    <div class="cat-header" onclick="toggleCat(this)">
+      <div class="cat-left">
+        <span class="cat-title">cves & specific vulns</span>
+        <span class="cat-count">1</span>
+      </div>
+      <span class="cat-chevron">▼</span>
+    </div>
+    <div class="cat-grid">
+
+      <a class="card" href="./cve/samlstorm/"
+         style="--c1:#ef4444;--c2:#8b5cf6"
+         data-tags="samlstorm cve saml ruby omniauth authentication bypass critical"
+         data-category="cve">
+        <div class="card-icon">⚡</div>
+        <div>
+          <div class="card-tag" style="background:rgba(239,68,68,0.1);color:#f87171;">CVE Deep-Dive</div>
+          <h2>SAMLStorm</h2>
+        </div>
+        <p>Critical authentication bypass in ruby-saml — how it works, what's exploitable, and how to patch.</p>
+        <div class="card-meta">
+          <span>deep-dive · quiz incoming</span>
+          <span class="card-difficulty diff-advanced">advanced</span>
+        </div>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- ── CATEGORY: Project Management ── -->
+  <div class="cat-section" data-category="project-management">
+    <div class="cat-header" onclick="toggleCat(this)">
+      <div class="cat-left">
+        <span class="cat-title">project management</span>
+        <span class="cat-count">0</span>
+      </div>
+      <span class="cat-chevron">▼</span>
+    </div>
+    <div class="cat-grid">
+      <div style="grid-column:1/-1;font-family:var(--mono);font-size:12px;color:var(--muted);padding:16px 0;">
+        coming soon — scrum, kanban, magisches dreieck, stakeholder management
+      </div>
+    </div>
+  </div>
+
+  <div class="empty-state" id="empty-state">no results found — try a different search term</div>
+
+</div><!-- /wrap -->
 
 <footer>
   built by <a href="https://niklas-heringer.com">niklas-heringer.com</a> ·
@@ -444,15 +572,70 @@
 </footer>
 
 <script>
-const input = document.getElementById('search');
+// ── Collapse/expand categories ─────────────────────────────────────────────
+function toggleCat(header) {
+  const section = header.closest('.cat-section');
+  section.classList.toggle('collapsed');
+}
+
+// ── Filter buttons ─────────────────────────────────────────────────────────
+const filterBtns = document.querySelectorAll('.filter-btn');
+const catSections = document.querySelectorAll('.cat-section');
 const cards = document.querySelectorAll('.card');
-input.addEventListener('input', () => {
-  const q = input.value.toLowerCase().trim();
-  cards.forEach(c => {
-    const text = (c.dataset.tags + ' ' + c.textContent).toLowerCase();
-    c.classList.toggle('hidden', q.length > 0 && !text.includes(q));
+
+filterBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    filterBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    applyFilters();
   });
 });
+
+// ── Search ─────────────────────────────────────────────────────────────────
+const searchInput = document.getElementById('search');
+searchInput.addEventListener('input', applyFilters);
+
+function applyFilters() {
+  const activeFilter = document.querySelector('.filter-btn.active').dataset.filter;
+  const query = searchInput.value.toLowerCase().trim();
+
+  let anyVisible = false;
+
+  catSections.forEach(section => {
+    const cat = section.dataset.category;
+    const catMatchesFilter = activeFilter === 'all' || activeFilter === cat;
+
+    // show/hide entire section based on filter
+    if (!catMatchesFilter) {
+      section.classList.add('hidden');
+      return;
+    }
+    section.classList.remove('hidden');
+
+    // within visible section, filter cards by search
+    const sectionCards = section.querySelectorAll('.card');
+    let visibleInSection = 0;
+
+    sectionCards.forEach(card => {
+      const text = (card.dataset.tags + ' ' + card.textContent).toLowerCase();
+      const matchesSearch = query.length === 0 || text.includes(query);
+      card.classList.toggle('hidden-filter', !matchesSearch);
+      if (matchesSearch) { visibleInSection++; anyVisible = true; }
+    });
+
+    // collapse section if all its cards are hidden by search
+    if (query.length > 0 && visibleInSection === 0) {
+      section.classList.add('hidden');
+    }
+
+    // auto-expand sections when searching
+    if (query.length > 0 && visibleInSection > 0) {
+      section.classList.remove('collapsed');
+    }
+  });
+
+  document.getElementById('empty-state').classList.toggle('show', !anyVisible && query.length > 0);
+}
 </script>
 </body>
 </html>
