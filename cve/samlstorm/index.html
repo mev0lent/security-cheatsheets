@@ -3,418 +3,277 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SAMLStorm — Attack Explainer</title>
+<title>SAMLStorm — CVE Deep-Dive | learn.niklas-heringer.com</title>
+<meta name="description" content="Deep-dive into SAMLStorm: CVE-2025-29775 and CVE-2025-29774 — XML signature bypass in xml-crypto and node-saml. How it works, why it works, and how to fix it.">
+<meta name="author" content="Niklas Heringer">
+<link rel="canonical" href="https://learn.niklas-heringer.com/cve/samlstorm/">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg: #0f1117;
-  --surface: #161b27;
-  --surface2: #1c2333;
-  --border: #242d3f;
-  --text: #cdd5e0;
-  --muted: #566375;
-  --red: #ff4757;
-  --red-dim: rgba(255,71,87,0.12);
-  --orange: #ff8c42;
+  --bg:         #0f1117;
+  --surface:    #161b27;
+  --surface2:   #1c2333;
+  --border:     #242d3f;
+  --text:       #cdd5e0;
+  --muted:      #566375;
+  --red:        #ff4757;
+  --red-dim:    rgba(255,71,87,0.12);
+  --orange:     #ff8c42;
   --orange-dim: rgba(255,140,66,0.1);
-  --green: #2ed573;
-  --green-dim: rgba(46,213,115,0.1);
-  --blue: #54a0ff;
-  --blue-dim: rgba(84,160,255,0.1);
-  --yellow: #ffd32a;
+  --green:      #2ed573;
+  --green-dim:  rgba(46,213,115,0.1);
+  --blue:       #54a0ff;
+  --blue-dim:   rgba(84,160,255,0.1);
+  --yellow:     #ffd32a;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans', sans-serif;
 }
 
-body {
-  font-family: 'IBM Plex Sans', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  line-height: 1.7;
-  min-height: 100vh;
-}
+body { font-family: var(--sans); background: var(--bg); color: var(--text); line-height: 1.7; min-height: 100vh; }
 
-/* scan-line texture */
 body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0,0,0,0.03) 2px,
-    rgba(0,0,0,0.03) 4px
-  );
-  pointer-events: none;
-  z-index: 9999;
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
 }
 
-.wrap {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 0 1.5rem 6rem;
+/* ── NAV ── */
+nav {
+  border-bottom: 1px solid var(--border);
+  background: rgba(15,17,23,0.92);
+  backdrop-filter: blur(14px);
+  position: sticky; top: 0; z-index: 200;
 }
+.nav-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 24px; max-width: 900px; margin: 0 auto;
+}
+.nav-left { display: flex; align-items: center; gap: 12px; }
+.nav-avatar { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #a23319; object-fit: cover; box-shadow: 0 0 8px rgba(162,51,25,0.45); }
+.nav-logo { font-family: var(--mono); font-size: 12px; font-weight: 600; color: #5dd39e; text-decoration: none; }
+.nav-logo span { color: var(--muted); font-weight: 400; }
+.nav-right { display: flex; gap: 8px; }
+.nav-btn { font-family: var(--mono); font-size: 11px; color: var(--muted); text-decoration: none; border: 1px solid var(--border); padding: 4px 12px; border-radius: 4px; transition: .2s; }
+.nav-btn:hover { color: #5dd39e; border-color: #5dd39e; }
+
+/* ── WRAP ── */
+.wrap { max-width: 900px; margin: 0 auto; padding: 0 1.5rem 6rem; }
 
 /* ── HEADER ── */
-header {
-  padding: 4rem 0 3rem;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 3rem;
-  position: relative;
-}
+header { padding: 4rem 0 3rem; border-bottom: 1px solid var(--border); margin-bottom: 3rem; position: relative; }
 
-.cve-bar {
-  display: flex;
-  gap: 0.6rem;
-  margin-bottom: 1.25rem;
-  flex-wrap: wrap;
-}
+.cve-bar { display: flex; gap: 0.6rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
 
 .tag {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.65rem;
-  letter-spacing: 0.1em;
-  padding: 0.2rem 0.6rem;
-  border-radius: 2px;
-  text-transform: uppercase;
+  font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.1em;
+  padding: 0.2rem 0.6rem; border-radius: 2px; text-transform: uppercase;
 }
-.tag-red { background: var(--red-dim); color: var(--red); border: 1px solid rgba(255,71,87,0.3); }
+.tag-red    { background: var(--red-dim);    color: var(--red);    border: 1px solid rgba(255,71,87,0.3); }
 .tag-orange { background: var(--orange-dim); color: var(--orange); border: 1px solid rgba(255,140,66,0.3); }
-.tag-blue { background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(84,160,255,0.3); }
-.tag-green { background: var(--green-dim); color: var(--green); border: 1px solid rgba(46,213,115,0.3); }
+.tag-blue   { background: var(--blue-dim);   color: var(--blue);   border: 1px solid rgba(84,160,255,0.3); }
+.tag-green  { background: var(--green-dim);  color: var(--green);  border: 1px solid rgba(46,213,115,0.3); }
 
-h1 {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: clamp(2.5rem, 6vw, 4rem);
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: #fff;
-  line-height: 1;
-  margin-bottom: 0.75rem;
-}
-
+h1 { font-family: var(--mono); font-size: clamp(2.2rem,6vw,3.8rem); font-weight: 600; letter-spacing: -0.02em; color: #fff; line-height: 1; margin-bottom: 0.75rem; }
 h1 span { color: var(--red); }
-
-.subtitle {
-  color: var(--muted);
-  font-size: 0.95rem;
-  font-weight: 300;
-  max-width: 600px;
-}
+.subtitle { color: var(--muted); font-size: 0.95rem; font-weight: 300; max-width: 600px; }
 
 /* ── SECTION ── */
-.section {
-  margin: 3rem 0;
-  opacity: 0;
-  transform: translateY(16px);
-  transition: opacity 0.5s ease, transform 0.5s ease;
-}
+.section { margin: 3rem 0; opacity: 0; transform: translateY(16px); transition: opacity .5s ease, transform .5s ease; }
 .section.visible { opacity: 1; transform: none; }
+.section-label { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }
 
-.section-label {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.6rem;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 0.4rem;
-}
-
-h2 {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 1.3rem;
-  font-weight: 600;
-  color: #fff;
-  margin-bottom: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-h2::before {
-  content: '';
-  display: block;
-  width: 3px;
-  height: 1.2em;
-  background: var(--red);
-  border-radius: 2px;
-  flex-shrink: 0;
-}
-h2.blue::before { background: var(--blue); }
-h2.green::before { background: var(--green); }
+h2 { font-family: var(--mono); font-size: 1.3rem; font-weight: 600; color: #fff; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.75rem; }
+h2::before { content: ''; display: block; width: 3px; height: 1.2em; background: var(--red); border-radius: 2px; flex-shrink: 0; }
+h2.blue::before   { background: var(--blue); }
+h2.green::before  { background: var(--green); }
 h2.orange::before { background: var(--orange); }
 
 p { color: var(--text); font-size: 0.95rem; margin-bottom: 0.75rem; }
 p:last-child { margin-bottom: 0; }
+code { font-family: var(--mono); font-size: 0.82em; background: var(--surface2); padding: 0.1em 0.35em; border-radius: 3px; color: var(--blue); }
 
 /* ── XML VIEWER ── */
-.xml-wrap {
-  background: #0a0d14;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  margin: 1.25rem 0;
-  overflow: hidden;
-}
+.xml-wrap { background: #0a0d14; border: 1px solid var(--border); border-radius: 6px; margin: 1.25rem 0; overflow: hidden; }
+.xml-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 1rem; background: var(--surface2); border-bottom: 1px solid var(--border); gap: 1rem; }
+.xml-title { font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
+.xml-body { padding: 1.25rem 1.5rem; overflow-x: auto; }
+.xml-body pre { font-family: var(--mono); font-size: 0.76rem; line-height: 1.9; white-space: pre; color: #7a8fa8; }
+.xt { color: #54a0ff; }
+.xa { color: #ff8c42; }
+.xv { color: #a8d8a8; }
+.xc { color: #3d4f63; font-style: italic; }
+.xh { color: #ffd32a; font-weight: 600; }
+.xr { color: #ff4757; font-weight: 600; }
+.xg { color: #2ed573; }
 
-.xml-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.5rem 1rem;
-  background: var(--surface2);
-  border-bottom: 1px solid var(--border);
-}
-
-.xml-title {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.65rem;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.xml-body {
-  padding: 1.25rem 1.5rem;
-  overflow-x: auto;
-}
-
-.xml-body pre {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.76rem;
-  line-height: 1.9;
-  white-space: pre;
-  color: #7a8fa8;
-}
-
-.xt { color: #54a0ff; }   /* tag */
-.xa { color: #ff8c42; }   /* attr */
-.xv { color: #a8d8a8; }   /* value */
-.xc { color: #3d4f63; font-style: italic; } /* comment */
-.xh { color: #ffd32a; font-weight: 600; }  /* highlight — attack target */
-.xr { color: #ff4757; font-weight: 600; }  /* red — injected */
-.xg { color: #2ed573; }                    /* green — valid/original */
-
-/* diff view */
-.diff-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1px;
-  background: var(--border);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  overflow: hidden;
-  margin: 1.25rem 0;
-}
+/* ── DIFF ── */
+.diff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; margin: 1.25rem 0; }
 @media(max-width:640px) { .diff-grid { grid-template-columns: 1fr; } }
-
-.diff-panel {
-  background: #0a0d14;
-  padding: 0;
-}
-.diff-header {
-  padding: 0.5rem 1rem;
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.62rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  border-bottom: 1px solid var(--border);
-}
+.diff-panel { background: #0a0d14; }
+.diff-header { padding: 0.5rem 1rem; font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; border-bottom: 1px solid var(--border); }
 .diff-header.before { background: rgba(255,71,87,0.08); color: var(--red); }
-.diff-header.after { background: rgba(46,213,115,0.08); color: var(--green); }
-.diff-body {
-  padding: 1rem 1.25rem;
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.74rem;
-  line-height: 1.9;
-  color: #7a8fa8;
-}
+.diff-header.after  { background: rgba(46,213,115,0.08); color: var(--green); }
+.diff-body { padding: 1rem 1.25rem; font-family: var(--mono); font-size: 0.74rem; line-height: 1.9; color: #7a8fa8; }
 
 /* ── CALLOUT ── */
-.callout {
-  display: flex;
-  gap: 1rem;
-  padding: 1rem 1.25rem;
-  border-radius: 4px;
-  margin: 1rem 0;
-  font-size: 0.9rem;
-  border-left: 3px solid;
-  align-items: flex-start;
-}
+.callout { display: flex; gap: 1rem; padding: 1rem 1.25rem; border-radius: 4px; margin: 1rem 0; font-size: 0.9rem; border-left: 3px solid; align-items: flex-start; }
 .callout-icon { font-size: 1rem; flex-shrink: 0; margin-top: 0.1rem; }
-.callout.danger { background: var(--red-dim); border-color: var(--red); }
-.callout.info { background: var(--blue-dim); border-color: var(--blue); }
-.callout.success { background: var(--green-dim); border-color: var(--green); }
-.callout.warn { background: var(--orange-dim); border-color: var(--orange); }
+.callout.danger  { background: var(--red-dim);    border-color: var(--red); }
+.callout.info    { background: var(--blue-dim);   border-color: var(--blue); }
+.callout.success { background: var(--green-dim);  border-color: var(--green); }
+.callout.warn    { background: var(--orange-dim); border-color: var(--orange); }
 .callout strong { color: #fff; }
 
 /* ── TRUST CHAIN ── */
-.chain {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  margin: 1.25rem 0;
-  flex-wrap: wrap;
-}
-.chain-node {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 0.6rem 1rem;
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.72rem;
-  color: var(--text);
-  white-space: nowrap;
-  position: relative;
-}
-.chain-node.broken {
-  border-color: var(--red);
-  color: var(--red);
-  background: var(--red-dim);
-}
-.chain-node.ok { border-color: var(--green); color: var(--green); background: var(--green-dim); }
-.chain-arrow {
-  font-family: 'IBM Plex Mono', monospace;
-  color: var(--muted);
-  padding: 0 0.4rem;
-  font-size: 0.8rem;
-}
+.chain { display: flex; align-items: center; gap: 0; margin: 1.25rem 0; flex-wrap: wrap; }
+.chain-node { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 0.6rem 1rem; font-family: var(--mono); font-size: 0.72rem; color: var(--text); white-space: nowrap; }
+.chain-node.broken { border-color: var(--red);   color: var(--red);   background: var(--red-dim); }
+.chain-node.ok     { border-color: var(--green); color: var(--green); background: var(--green-dim); }
+.chain-arrow { font-family: var(--mono); color: var(--muted); padding: 0 0.4rem; font-size: 0.8rem; }
 .chain-arrow.broken { color: var(--red); }
 
 /* ── COMPARE TABLE ── */
-.compare {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.87rem;
-  margin: 1.25rem 0;
-}
-.compare th {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.62rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  padding: 0.65rem 1rem;
-  text-align: left;
-  background: var(--surface2);
-  border-bottom: 2px solid var(--border);
-  color: var(--muted);
-}
-.compare td {
-  padding: 0.7rem 1rem;
-  border-bottom: 1px solid var(--border);
-  vertical-align: top;
-  font-size: 0.85rem;
-}
+.compare { width: 100%; border-collapse: collapse; font-size: 0.87rem; margin: 1.25rem 0; }
+.compare th { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.65rem 1rem; text-align: left; color: var(--muted); border-bottom: 2px solid var(--border); background: var(--surface); }
+.compare td { padding: 0.65rem 1rem; border-bottom: 1px solid var(--border); font-size: 0.88rem; vertical-align: top; }
+.compare tr:last-child td { border-bottom: none; }
 .compare tr:hover td { background: var(--surface); }
-.ok { color: var(--green); }
+.compare td:first-child { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
+.ok  { color: var(--green); }
 .bad { color: var(--red); }
 
-/* ── DIVIDER ── */
-hr {
-  border: none;
-  border-top: 1px solid var(--border);
-  margin: 2.5rem 0;
-}
+hr { border: none; border-top: 1px solid var(--border); margin: 3rem 0; }
 
-code {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.82em;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  padding: 0.1em 0.35em;
-  border-radius: 3px;
-  color: var(--orange);
-}
+/* ── QUIZ ── */
+.quiz-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 2rem; margin-top: 1.5rem; }
+.quiz-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 12px; }
+.quiz-header h3 { font-family: var(--mono); font-size: 1rem; font-weight: 600; color: #fff; }
+.quiz-progress-wrap { display: flex; align-items: center; gap: 10px; }
+.quiz-bar-track { width: 140px; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.quiz-bar-fill { height: 100%; background: linear-gradient(90deg, var(--red), var(--orange)); border-radius: 2px; transition: width .4s ease; }
+.quiz-prog-text { font-family: var(--mono); font-size: 11px; color: var(--muted); }
 
-/* ── ANIMATIONS ── */
-@keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
-header > * { animation: fadeUp 0.6s ease both; }
-header .cve-bar { animation-delay: 0.05s; }
-header h1 { animation-delay: 0.15s; }
-header .subtitle { animation-delay: 0.25s; }
+.question { display: none; }
+.question.active { display: block; animation: fadeIn .3s ease; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+.q-num  { font-family: var(--mono); font-size: 0.6rem; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.q-text { font-size: 1rem; font-weight: 600; color: #fff; margin-bottom: 16px; line-height: 1.5; }
+.q-code { background: #0a0d14; border: 1px solid var(--border); border-radius: 4px; padding: 10px 14px; font-family: var(--mono); font-size: 0.76rem; color: #7a8fa8; margin-bottom: 14px; white-space: pre; overflow-x: auto; }
+
+.options { display: grid; gap: 8px; }
+.option {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+  padding: 10px 14px; cursor: pointer; font-size: 0.88rem; color: var(--text);
+  transition: .2s; text-align: left; width: 100%; font-family: var(--sans);
+  display: flex; align-items: center; gap: 10px;
+}
+.option:hover:not(:disabled) { border-color: var(--red); color: #fff; }
+.opt-key { font-family: var(--mono); font-size: 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 3px; padding: 1px 6px; color: var(--muted); flex-shrink: 0; }
+.option.correct { border-color: var(--green)!important; background: var(--green-dim)!important; color: var(--green)!important; }
+.option.wrong   { border-color: var(--red)!important;   background: var(--red-dim)!important;   color: var(--red)!important; }
+.option:disabled { cursor: default; }
+
+.explanation { margin-top: 14px; padding: 12px 14px; background: var(--blue-dim); border: 1px solid rgba(84,160,255,.2); border-radius: 6px; font-size: 0.86rem; color: var(--text); display: none; line-height: 1.6; }
+.explanation.show { display: block; animation: fadeIn .3s ease; }
+.explanation strong { color: var(--blue); }
+
+.quiz-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 20px; }
+.quiz-score { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.btn { font-family: var(--mono); font-size: 12px; font-weight: 600; padding: 8px 18px; border-radius: 6px; cursor: pointer; border: none; transition: .2s; }
+.btn-primary { background: linear-gradient(135deg, var(--red), var(--orange)); color: #fff; }
+.btn-primary:hover { opacity: .9; transform: translateY(-1px); }
+.btn-primary:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+.quiz-result { text-align: center; padding: 16px 0; display: none; }
+.result-score { font-family: var(--mono); font-size: 3.5rem; font-weight: 700; color: var(--red); display: block; margin-bottom: 8px; }
+.result-msg { font-size: 0.95rem; color: var(--muted); margin-bottom: 20px; }
+
+/* ── BLOG CTA ── */
+.blog-cta { border-top: 1px solid var(--border); margin-top: 3rem; padding-top: 2rem; text-align: center; }
+.blog-cta p { color: var(--muted); font-size: 0.9rem; margin-bottom: 16px; }
+.cta-link { display: inline-block; font-family: var(--mono); font-size: 12px; font-weight: 600; padding: 10px 24px; border-radius: 6px; background: linear-gradient(135deg, var(--red), var(--orange)); color: #fff; text-decoration: none; transition: .2s; }
+.cta-link:hover { opacity: .9; transform: translateY(-1px); }
+
+/* ── FOOTER ── */
+footer { border-top: 1px solid var(--border); padding: 28px 24px; text-align: center; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+footer a { color: #5dd39e; text-decoration: none; }
+footer a:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <div class="nav-left">
+      <img class="nav-avatar" src="/avatar.png" alt="Niklas Heringer">
+      <a class="nav-logo" href="/">learn<span>.niklas-heringer.com</span></a>
+    </div>
+    <div class="nav-right">
+      <a class="nav-btn" href="/">← all sheets</a>
+      <a class="nav-btn" href="https://niklas-heringer.com" target="_blank">blog ↗</a>
+    </div>
+  </div>
+</nav>
+
 <div class="wrap">
 
+<!-- ── HEADER ── -->
 <header>
   <div class="cve-bar">
     <span class="tag tag-red">CVE-2025-29775</span>
     <span class="tag tag-red">CVE-2025-29774</span>
-    <span class="tag tag-orange">CVSS 9.3 Critical</span>
-    <span class="tag tag-blue">node-saml · xml-crypto</span>
-    <span class="tag tag-blue">März 2025</span>
+    <span class="tag tag-orange">xml-crypto ≤ 6.0.0</span>
+    <span class="tag tag-blue">node-saml</span>
+    <span class="tag tag-red">Authentication Bypass</span>
+    <span class="tag tag-orange">CVSS 9.1</span>
   </div>
   <h1>SAML<span>Storm</span></h1>
-  <p class="subtitle">Authentication Bypass durch manipuliertes XML — mit einem gültigen Login als user1 einloggen und dabei als admin ankommen.</p>
+  <p class="subtitle">How two XML parsers reading the same document from different angles broke SSO authentication for thousands of applications — without touching a single cryptographic primitive.</p>
 </header>
 
-
 <!-- ══════════════════════════════════════ -->
-<!-- WAS IST DIE SAMLRESPONSE              -->
+<!-- SECTION 1: WHAT                       -->
 <!-- ══════════════════════════════════════ -->
 <section class="section" id="s1">
-  <div class="section-label">01 — Der Payload</div>
-  <h2>Was steckt in der SAMLResponse?</h2>
+  <div class="section-label">01 — Overview</div>
+  <h2>What happened?</h2>
 
-  <p>Nach dem Login schickt der IdP eine <strong style="color:#fff">SAMLResponse</strong> an den SP — Base64-kodiertes XML, das die Identität des Users enthält und digital signiert ist. Das ist Schritt 5 im Flow, den wir in Burp sehen.</p>
-  <p>Dekodiert sieht es so aus — das ist eine echte Response aus der Demo-Umgebung (vereinfacht):</p>
+  <p>SAMLStorm is a pair of critical vulnerabilities in <code>xml-crypto</code> (≤ 6.0.0) and <code>node-saml</code> that allow a logged-in user to impersonate any other user — including administrators — without knowing their credentials or breaking any cryptography.</p>
 
-  <div class="xml-wrap">
-    <div class="xml-toolbar">
-      <span class="xml-title">SAMLResponse — dekodiert</span>
-      <span class="tag tag-blue">POST /login/callback</span>
-    </div>
-    <div class="xml-body"><pre><span class="xt">&lt;samlp:Response</span> <span class="xa">ID</span>=<span class="xv">"_375ef4cb992..."</span>
-  <span class="xa">IssueInstant</span>=<span class="xv">"2025-03-04T16:05:30Z"</span>
-  <span class="xa">Destination</span>=<span class="xv">"http://localhost:4300/login/callback"</span><span class="xt">&gt;</span>
+  <p>The attack works because the signature verification library (<code>xml-crypto</code>) and the assertion extraction library (<code>node-saml</code>) read different parts of the same XML document. The attacker exploits this split perspective to pass a valid signature check while the assertion content has already been swapped.</p>
 
-  <span class="xt">&lt;saml:Issuer&gt;</span><span class="xg">http://localhost:8080/simplesaml/saml2/idp/metadata.php</span><span class="xt">&lt;/saml:Issuer&gt;</span>
-
-  <span class="xt">&lt;ds:Signature&gt;</span>
-    <span class="xt">&lt;ds:SignedInfo&gt;</span>
-      <span class="xt">&lt;ds:CanonicalizationMethod</span> <span class="xa">Algorithm</span>=<span class="xv">"...xml-exc-c14n#"</span><span class="xt">/&gt;</span>
-      <span class="xt">&lt;ds:SignatureMethod</span> <span class="xa">Algorithm</span>=<span class="xv">"...rsa-sha1"</span><span class="xt">/&gt;</span>
-      <span class="xt">&lt;ds:Reference</span> <span class="xa">URI</span>=<span class="xv">"#_375ef4cb992..."</span><span class="xt">&gt;</span>
-        <span class="xt">&lt;ds:DigestMethod</span> <span class="xa">Algorithm</span>=<span class="xv">"...sha1"</span><span class="xt">/&gt;</span>
-        <span class="xh">&lt;ds:DigestValue&gt;</span><span class="xg">jMHaXYxasIl3oc5Q+VW0UYUCY6s=</span><span class="xh">&lt;/ds:DigestValue&gt;</span>
-      <span class="xt">&lt;/ds:Reference&gt;</span>
-    <span class="xt">&lt;/ds:SignedInfo&gt;</span>
-    <span class="xt">&lt;ds:SignatureValue&gt;</span><span class="xg">XKp7z2Q...longbase64...==</span><span class="xt">&lt;/ds:SignatureValue&gt;</span>
-  <span class="xt">&lt;/ds:Signature&gt;</span>
-
-  <span class="xt">&lt;saml:Assertion&gt;</span>
-    <span class="xt">&lt;saml:Subject&gt;</span>
-      <span class="xh">&lt;saml:NameID&gt;</span><span class="xg">user1@example.com</span><span class="xh">&lt;/saml:NameID&gt;</span>
-    <span class="xt">&lt;/saml:Subject&gt;</span>
-    <span class="xt">&lt;saml:AttributeStatement&gt;</span>
-      <span class="xt">&lt;saml:Attribute</span> <span class="xa">Name</span>=<span class="xv">"uid"</span><span class="xt">&gt;</span>
-        <span class="xt">&lt;saml:AttributeValue&gt;</span><span class="xg">1</span><span class="xt">&lt;/saml:AttributeValue&gt;</span>
-      <span class="xt">&lt;/saml:Attribute&gt;</span>
-      <span class="xt">&lt;saml:Attribute</span> <span class="xa">Name</span>=<span class="xv">"email"</span><span class="xt">&gt;</span>
-        <span class="xt">&lt;saml:AttributeValue&gt;</span><span class="xg">user1@example.com</span><span class="xt">&lt;/saml:AttributeValue&gt;</span>
-      <span class="xt">&lt;/saml:Attribute&gt;</span>
-      <span class="xt">&lt;saml:Attribute</span> <span class="xa">Name</span>=<span class="xv">"eduPersonAffiliation"</span><span class="xt">&gt;</span>
-        <span class="xt">&lt;saml:AttributeValue&gt;</span><span class="xg">group1</span><span class="xt">&lt;/saml:AttributeValue&gt;</span>
-      <span class="xt">&lt;/saml:Attribute&gt;</span>
-    <span class="xt">&lt;/saml:AttributeStatement&gt;</span>
-  <span class="xt">&lt;/saml:Assertion&gt;</span>
-
-<span class="xt">&lt;/samlp:Response&gt;</span></pre></div>
+  <div class="callout danger">
+    <span class="callout-icon">🔴</span>
+    <div><strong>Impact:</strong> Any authenticated user can escalate to admin or any other account in the system. No password needed. No crypto broken. Just two parsers disagreeing about what they read.</div>
   </div>
 
-  <p>Die zwei gelb markierten Elemente sind die Angriffsziele: <code>DigestValue</code> und <code>NameID</code>. Die Signatur schützt beide — theoretisch.</p>
+  <table class="compare">
+    <thead><tr><th>Property</th><th>Detail</th></tr></thead>
+    <tbody>
+      <tr><td>CVEs</td><td>CVE-2025-29775, CVE-2025-29774</td></tr>
+      <tr><td>Affected packages</td><td>xml-crypto ≤ 6.0.0, node-saml (all versions using affected xml-crypto)</td></tr>
+      <tr><td>CVSS Score</td><td><span class="bad">9.1 Critical</span></td></tr>
+      <tr><td>Attack requirement</td><td>Valid account on the IdP (any user)</td></tr>
+      <tr><td>Patch released</td><td>xml-crypto 6.0.1 — March 2025</td></tr>
+      <tr><td>Known affected</td><td>WorkOS, multiple SaaS platforms using node-saml</td></tr>
+    </tbody>
+  </table>
 </section>
 
 <hr>
 
 <!-- ══════════════════════════════════════ -->
-<!-- DIE VERTRAUENSKETTE                   -->
+<!-- SECTION 2: TRUST CHAIN                -->
 <!-- ══════════════════════════════════════ -->
 <section class="section" id="s2">
-  <div class="section-label">02 — Die Grundlage</div>
-  <h2 class="blue">Die Vertrauenskette</h2>
+  <div class="section-label">02 — The Foundation</div>
+  <h2 class="blue">The Trust Chain</h2>
 
-  <p>Der SP vertraut der Assertion nur weil eine kryptographische Kette sie absichert. So soll es aussehen:</p>
+  <p>The SP only trusts an assertion because a cryptographic chain secures it. This is how it's supposed to work:</p>
 
   <div class="chain">
     <div class="chain-node ok">IdP Private Key</div>
@@ -428,49 +287,49 @@ header .subtitle { animation-delay: 0.25s; }
     <div class="chain-node ok">Assertion (user1)</div>
   </div>
 
-  <p style="margin-top:0.5rem">Jedes Glied sichert das nächste. Der DigestValue ist der Hash der Assertion. Ändert man die Assertion, stimmt der Hash nicht mehr — und die Signatur schlägt fehl.</p>
-  <p><strong style="color:#fff">SAMLStorm bricht diese Kette</strong> — nicht durch Kryptographie, sondern weil xml-crypto und node-saml <em>unterschiedliche Teile desselben Dokuments lesen</em>.</p>
+  <p style="margin-top:0.5rem">Each link secures the next. The DigestValue is the hash of the assertion. Change the assertion and the hash no longer matches — the signature check fails.</p>
+  <p><strong style="color:#fff">SAMLStorm breaks this chain</strong> — not through cryptography, but because xml-crypto and node-saml read <em>different parts of the same document</em>.</p>
 
   <div class="chain" style="margin-top:1rem">
     <div class="chain-node ok">IdP Private Key</div>
     <div class="chain-arrow">→</div>
     <div class="chain-node ok">SignatureValue ✓</div>
     <div class="chain-arrow broken">→</div>
-    <div class="chain-node broken">DigestValue ← falsch gelesen</div>
+    <div class="chain-node broken">DigestValue ← read incorrectly</div>
     <div class="chain-arrow broken">↛</div>
-    <div class="chain-node broken">Assertion (admin) ← manipuliert</div>
+    <div class="chain-node broken">Assertion (admin) ← tampered</div>
   </div>
 
   <div class="callout danger" style="margin-top:1rem">
     <span class="callout-icon">🔴</span>
-    <div><strong>Der Kern:</strong> Die Signatur ist mathematisch gültig — der IdP hat wirklich unterschrieben. Aber xml-crypto vergleicht sie mit dem falschen Inhalt. Der SP denkt alles ist in Ordnung und loggt den Angreifer als admin ein.</div>
+    <div><strong>The core issue:</strong> The signature is mathematically valid — the IdP genuinely signed it. But xml-crypto verifies it against the wrong content. The SP thinks everything checks out and logs the attacker in as admin.</div>
   </div>
 </section>
 
 <hr>
 
 <!-- ══════════════════════════════════════ -->
-<!-- CVE-2025-29775                        -->
+<!-- SECTION 3: CVE-2025-29775             -->
 <!-- ══════════════════════════════════════ -->
 <section class="section" id="s3">
   <div class="section-label">03 — CVE-2025-29775</div>
   <h2>DigestValue Comment Injection</h2>
 
-  <p>xml-crypto liest den DigestValue als Text-Node. Wenn ein XML-Kommentar im Element steckt, liest es nur den Text <em>nach</em> dem Kommentar — den echten Hash. Aber die Assertion wurde bereits geändert.</p>
+  <p>xml-crypto reads the DigestValue as a text node. When an XML comment is injected inside the element, it only reads the text <em>after</em> the comment — the real hash. But the assertion content has already been changed.</p>
 
   <div class="diff-grid">
     <div class="diff-panel">
-      <div class="diff-header before">Original — vom IdP signiert</div>
+      <div class="diff-header before">Original — signed by the IdP</div>
       <div class="diff-body"><span style="color:#7a8fa8">&lt;ds:DigestValue&gt;</span>
   <span style="color:#2ed573">jMHaXYxasIl3oc5Q+VW0UYUCY6s=</span>
 <span style="color:#7a8fa8">&lt;/ds:DigestValue&gt;</span>
 
 <span style="color:#7a8fa8">&lt;saml:NameID&gt;</span>
-  <span style="color:#2ed573">user1@example.com</span>
+  <span style="color:#2ed573">user1@company.com</span>
 <span style="color:#7a8fa8">&lt;/saml:NameID&gt;</span></div>
     </div>
     <div class="diff-panel">
-      <div class="diff-header after">Manipuliert — vom Angreifer</div>
+      <div class="diff-header after">Tampered — by the attacker</div>
       <div class="diff-body"><span style="color:#7a8fa8">&lt;ds:DigestValue&gt;</span>
   <span style="color:#ff4757">&lt;!--forged--&gt;</span><span style="color:#2ed573">jMHaXYxasIl3oc5Q+VW0UYUCY6s=</span>
 <span style="color:#7a8fa8">&lt;/ds:DigestValue&gt;</span>
@@ -481,23 +340,23 @@ header .subtitle { animation-delay: 0.25s; }
     </div>
   </div>
 
-  <p>Was xml-crypto sieht: <code>jMHaXYxasIl3oc5Q+VW0UYUCY6s=</code> — der echte Hash. Prüfung bestanden.</p>
-  <p>Was node-saml aus der Assertion liest: <code>admin</code> als NameID.</p>
+  <p>What xml-crypto sees: <code>jMHaXYxasIl3oc5Q+VW0UYUCY6s=</code> — the real hash. Check passes.</p>
+  <p>What node-saml extracts from the assertion: <code>admin</code> as the NameID.</p>
 
   <div class="callout warn">
     <span class="callout-icon">⚠️</span>
-    <div><strong>Warum das funktioniert:</strong> XML-Kommentare sind valide XML. Der Hash stimmt noch — weil xml-crypto 6.0.0 den Kommentar beim Lesen einfach ignoriert und nur den Text-Node dahinter nimmt. Die Assertion selbst wurde geändert, aber die Hash-Prüfung schlägt nie an.</div>
+    <div><strong>Why it works:</strong> XML comments are valid XML. The hash still matches — because xml-crypto 6.0.0 ignores the comment when reading and only takes the text node after it. The assertion itself was changed, but the hash check never fires.</div>
   </div>
 
   <div class="xml-wrap">
     <div class="xml-toolbar">
-      <span class="xml-title">Was im nx serve Terminal erscheint — nach erfolgreichem Exploit</span>
+      <span class="xml-title">What the server logs after a successful exploit</span>
       <span class="tag tag-red">Privilege Escalation</span>
     </div>
     <div class="xml-body"><pre>serialize user {
-  nameID: <span class="xr">'admin'</span>,        <span class="xc">← eingeloggt als user1, angekommen als admin</span>
+  nameID: <span class="xr">'admin'</span>,        <span class="xc">← logged in as user1, arrived as admin</span>
   uid: <span class="xr">'admin'</span>,
-  email: <span class="xg">'user1@example.com'</span>,  <span class="xc">← IdP-Attribute bleiben von user1</span>
+  email: <span class="xg">'user1@company.com'</span>,  <span class="xc">← IdP attributes still from user1</span>
   eduPersonAffiliation: <span class="xg">'group1'</span>,
 }</pre></div>
   </div>
@@ -506,89 +365,89 @@ header .subtitle { animation-delay: 0.25s; }
 <hr>
 
 <!-- ══════════════════════════════════════ -->
-<!-- CVE-2025-29774                        -->
+<!-- SECTION 4: CVE-2025-29774             -->
 <!-- ══════════════════════════════════════ -->
 <section class="section" id="s4">
   <div class="section-label">04 — CVE-2025-29774</div>
-  <h2>Doppelter SignedInfo</h2>
+  <h2>Duplicate SignedInfo</h2>
 
-  <p>xml-crypto und node-saml verarbeiten das XML unabhängig voneinander. Wenn zwei <code>SignedInfo</code>-Nodes existieren, schaut jeder auf den anderen.</p>
+  <p>xml-crypto and node-saml process the XML independently. When two <code>SignedInfo</code> nodes exist in the document, each library looks at a different one.</p>
 
   <div class="xml-wrap">
     <div class="xml-toolbar">
-      <span class="xml-title">Manipulierte Signatur-Struktur</span>
+      <span class="xml-title">Tampered signature structure</span>
       <span class="tag tag-red">CVE-2025-29774</span>
     </div>
     <div class="xml-body"><pre><span class="xt">&lt;ds:Signature&gt;</span>
 
-  <span class="xr">&lt;FakeWrapper&gt;</span>                   <span class="xc">&lt;!-- injiziert vom Angreifer --&gt;</span>
-    <span class="xr">&lt;ds:SignedInfo&gt;</span>               <span class="xc">&lt;!-- xml-crypto validiert DIESEN --&gt;</span>
+  <span class="xr">&lt;FakeWrapper&gt;</span>                   <span class="xc">&lt;!-- injected by attacker --&gt;</span>
+    <span class="xr">&lt;ds:SignedInfo&gt;</span>               <span class="xc">&lt;!-- xml-crypto validates THIS one --&gt;</span>
       <span class="xt">&lt;ds:Reference</span> <span class="xa">URI</span>=<span class="xv">"#fake"</span><span class="xt">&gt;</span>
         <span class="xt">&lt;ds:DigestValue&gt;</span>
           <span class="xr">47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=</span>
-          <span class="xc">&lt;!-- SHA256 von leerem String — vorhersagbar, immer gleich --&gt;</span>
+          <span class="xc">&lt;!-- SHA256 of empty string — predictable, always the same --&gt;</span>
         <span class="xt">&lt;/ds:DigestValue&gt;</span>
       <span class="xt">&lt;/ds:Reference&gt;</span>
     <span class="xr">&lt;/ds:SignedInfo&gt;</span>
   <span class="xr">&lt;/FakeWrapper&gt;</span>
 
-  <span class="xg">&lt;ds:SignedInfo&gt;</span>               <span class="xc">&lt;!-- node-saml liest DIESEN --&gt;</span>
+  <span class="xg">&lt;ds:SignedInfo&gt;</span>               <span class="xc">&lt;!-- node-saml reads THIS one --&gt;</span>
     <span class="xt">&lt;ds:Reference</span> <span class="xa">URI</span>=<span class="xv">"#realAssertion"</span><span class="xt">&gt;</span>
-      <span class="xt">&lt;ds:DigestValue&gt;</span><span class="xg">echter Hash...</span><span class="xt">&lt;/ds:DigestValue&gt;</span>
+      <span class="xt">&lt;ds:DigestValue&gt;</span><span class="xg">real hash...</span><span class="xt">&lt;/ds:DigestValue&gt;</span>
     <span class="xt">&lt;/ds:Reference&gt;</span>
   <span class="xg">&lt;/ds:SignedInfo&gt;</span>
 
 <span class="xt">&lt;/ds:Signature&gt;</span>
 
 <span class="xt">&lt;saml:Assertion&gt;</span>
-  <span class="xt">&lt;saml:NameID&gt;</span><span class="xr">admin</span><span class="xt">&lt;/saml:NameID&gt;</span>   <span class="xc">&lt;!-- geändert --&gt;</span>
+  <span class="xt">&lt;saml:NameID&gt;</span><span class="xr">admin</span><span class="xt">&lt;/saml:NameID&gt;</span>   <span class="xc">&lt;!-- swapped by attacker --&gt;</span>
 <span class="xt">&lt;/saml:Assertion&gt;</span></pre></div>
   </div>
 
   <div class="callout warn">
     <span class="callout-icon">⚠️</span>
-    <div><strong>Der Trick:</strong> xml-crypto findet den ersten <code>SignedInfo</code> (fake) und validiert ihn — DigestValue ist SHA256(""), was immer stimmt. node-saml liest den zweiten <code>SignedInfo</code> (echt) und extrahiert die Assertion daraus — die nun <code>admin</code> als NameID hat. Zwei Parser, zwei Perspektiven auf dasselbe Dokument.</div>
+    <div><strong>The trick:</strong> xml-crypto finds the first <code>SignedInfo</code> (fake) and validates it — the DigestValue is SHA256(""), which always matches. node-saml reads the second <code>SignedInfo</code> (real) and extracts the assertion from it — which now has <code>admin</code> as the NameID. Two parsers, two perspectives on the same document.</div>
   </div>
 </section>
 
 <hr>
 
 <!-- ══════════════════════════════════════ -->
-<!-- PATCH                                 -->
+<!-- SECTION 5: THE FIX                    -->
 <!-- ══════════════════════════════════════ -->
 <section class="section" id="s5">
-  <div class="section-label">05 — Der Fix</div>
-  <h2 class="green">Eine Versionsnummer Unterschied</h2>
+  <div class="section-label">05 — The Fix</div>
+  <h2 class="green">One version number apart</h2>
 
-  <p>xml-crypto 6.0.1 wurde am gleichen Tag wie die CVE-Veröffentlichung released — März 2025.</p>
+  <p>xml-crypto 6.0.1 was released the same day as the CVE disclosure — March 2025.</p>
 
   <table class="compare">
     <thead>
       <tr>
         <th>Check</th>
-        <th>xml-crypto 6.0.0 — verwundbar</th>
-        <th>xml-crypto 6.0.1 — gepatcht</th>
+        <th>xml-crypto 6.0.0 — vulnerable</th>
+        <th>xml-crypto 6.0.1 — patched</th>
       </tr>
     </thead>
     <tbody>
       <tr>
-        <td>Kommentar in DigestValue</td>
-        <td class="bad">✗ Wird ignoriert, Hash passt</td>
-        <td class="ok">✓ Sofort rejected</td>
+        <td>Comment in DigestValue</td>
+        <td class="bad">✗ Ignored, hash matches</td>
+        <td class="ok">✓ Immediately rejected</td>
       </tr>
       <tr>
-        <td>Mehrere SignedInfo</td>
-        <td class="bad">✗ Beide akzeptiert</td>
-        <td class="ok">✓ Mehr als einer → Fehler</td>
+        <td>Multiple SignedInfo nodes</td>
+        <td class="bad">✗ Both accepted</td>
+        <td class="ok">✓ More than one → error</td>
       </tr>
       <tr>
-        <td>Assertion-Quelle</td>
-        <td class="bad">✗ Aus Original-XML gelesen</td>
-        <td class="ok">✓ Aus verifiziertem Inhalt</td>
+        <td>Assertion source</td>
+        <td class="bad">✗ Read from original XML</td>
+        <td class="ok">✓ Read from verified content</td>
       </tr>
       <tr>
-        <td>HTTP Status bei Angriff</td>
-        <td class="bad">302 → Login erfolgreich</td>
+        <td>HTTP status on attack</td>
+        <td class="bad">302 → Login successful</td>
         <td class="ok">500 → Authentication failed</td>
       </tr>
     </tbody>
@@ -596,47 +455,270 @@ header .subtitle { animation-delay: 0.25s; }
 
   <div class="callout success">
     <span class="callout-icon">✅</span>
-    <div><strong>Takeaway:</strong> <code>npm audit</code> hätte gereicht. CVE und Patch kamen gleichzeitig. Wer seinen Dependency-Stack nicht aktuell hält, verliert die Kontrolle über seine Auth-Infrastruktur — durch eine einzige veraltete npm-Version.</div>
+    <div><strong>Takeaway:</strong> <code>npm audit</code> would have been enough. The CVE and the patch shipped simultaneously. Not keeping your dependency stack current means losing control over your auth infrastructure — through a single stale npm version.</div>
   </div>
 </section>
 
 <hr>
 
 <!-- ══════════════════════════════════════ -->
-<!-- KONTEXT: THE FRAGILE LOCK             -->
+<!-- SECTION 6: BIGGER PICTURE             -->
 <!-- ══════════════════════════════════════ -->
 <section class="section" id="s6">
-  <div class="section-label">06 — Größeres Bild</div>
-  <h2 class="orange">The Fragile Lock — Dezember 2025</h2>
+  <div class="section-label">06 — Bigger Picture</div>
+  <h2 class="orange">The Fragile Lock — December 2025</h2>
 
-  <p>PortSwigger Research hat die gleiche Angriffsklasse auf Ruby/PHP ausgedehnt. Die gemeinsame Wurzel ist dieselbe.</p>
+  <p>PortSwigger Research extended the same attack class to Ruby and PHP stacks. The common root is identical.</p>
 
   <table class="compare">
     <thead>
-      <tr><th></th><th>SAMLStorm (unser Stack)</th><th>The Fragile Lock</th></tr>
+      <tr><th></th><th>SAMLStorm (node stack)</th><th>The Fragile Lock</th></tr>
     </thead>
     <tbody>
-      <tr><td>Betroffen</td><td>xml-crypto / node-saml</td><td>ruby-saml / php-saml</td></tr>
-      <tr><td>Technik</td><td>Comment Injection, doppelter SignedInfo</td><td>Void Canonicalization, Attribute Pollution</td></tr>
-      <tr><td>Voraussetzung</td><td>Gültiger Login nötig</td><td class="bad">Nur öffentliche IdP-Metadaten</td></tr>
-      <tr><td>Gepatcht</td><td>März 2025</td><td>Dez. 2025 (CVE-2025-66568)</td></tr>
-      <tr><td>Real-World Impact</td><td>WorkOS, diverse SaaS-Plattformen</td><td>GitLab EE 17.8.4 (live Demo)</td></tr>
+      <tr><td>Affected</td><td>xml-crypto / node-saml</td><td>ruby-saml / php-saml</td></tr>
+      <tr><td>Technique</td><td>Comment Injection, duplicate SignedInfo</td><td>Void Canonicalization, Attribute Pollution</td></tr>
+      <tr><td>Prerequisite</td><td>Valid login required</td><td class="bad">Only public IdP metadata needed</td></tr>
+      <tr><td>Patched</td><td>March 2025</td><td>Dec. 2025 (CVE-2025-66568)</td></tr>
+      <tr><td>Real-world impact</td><td>WorkOS, various SaaS platforms</td><td>GitLab EE 17.8.4 (live demo)</td></tr>
     </tbody>
   </table>
 
   <div class="callout info">
     <span class="callout-icon">🔗</span>
-    <div><strong>Gemeinsame Wurzel beider Angriffe:</strong> Signaturverifikation und Assertion-Verarbeitung benutzen verschiedene Parser oder verschiedene Code-Pfade — und lesen dadurch verschiedene Teile desselben XML-Dokuments. Solange SAML auf XML-Signaturverarbeitung basiert, bleibt diese Angriffsfläche bestehen.</div>
+    <div><strong>Common root of both attacks:</strong> Signature verification and assertion processing use different parsers or different code paths on the same XML document. The attacker exploits the gap between what gets verified and what gets trusted. This is a structural weakness in how SAML libraries are built — not a one-off bug.</div>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-icon">⚠️</span>
+    <div><strong>Defence-in-depth:</strong> Even patched, SAML is complex. Complement it — enforce MFA at the IdP, monitor for impossible logins (same session, different NameID), and log all ACS endpoint hits with their raw SAMLResponse for forensic visibility.</div>
   </div>
 </section>
 
+<hr>
+
+<!-- ══════════════════════════════════════ -->
+<!-- QUIZ                                  -->
+<!-- ══════════════════════════════════════ -->
+<section class="section" id="s7">
+  <div class="section-label">07 — Test Yourself</div>
+  <h2>Quiz</h2>
+
+  <div class="quiz-wrap">
+    <div class="quiz-header">
+      <h3>// test your understanding</h3>
+      <div class="quiz-progress-wrap">
+        <div class="quiz-bar-track"><div class="quiz-bar-fill" id="qbar" style="width:10%"></div></div>
+        <span class="quiz-prog-text" id="qprog">1 / 8</span>
+      </div>
+    </div>
+
+    <div id="qwrap"></div>
+    <div class="quiz-result" id="qresult">
+      <span class="result-score" id="rscore"></span>
+      <p class="result-msg" id="rmsg"></p>
+      <button class="btn btn-primary" onclick="resetQuiz()">try again</button>
+    </div>
+
+    <div class="quiz-nav" id="qnav">
+      <span class="quiz-score" id="qscore">score: 0</span>
+      <button class="btn btn-primary" id="qnext" onclick="nextQ()" disabled>next →</button>
+    </div>
+  </div>
+</section>
+
+<div class="blog-cta">
+  <p>Want the full SAMLStorm writeup with lab setup and hands-on exploit walkthrough?</p>
+  <a class="cta-link" href="https://niklas-heringer.com" target="_blank">read the blog post →</a>
 </div>
 
+</div><!-- /wrap -->
+
+<footer>
+  <a href="/">learn.niklas-heringer.com</a>
+  &nbsp;·&nbsp;
+  <a href="https://niklas-heringer.com" target="_blank">niklas-heringer.com</a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/mev0lent/security-cheatsheets" target="_blank">github ↗</a>
+</footer>
+
 <script>
-const io = new IntersectionObserver(entries => {
+const questions = [
+  {
+    q: "What makes SAMLStorm different from a classic XML Signature Wrapping (XSW) attack?",
+    code: null,
+    opts: [
+      "SAMLStorm forges the IdP's private key",
+      "SAMLStorm exploits two parsers reading different parts of the same document, not just element reordering",
+      "SAMLStorm requires no valid account on the IdP",
+      "SAMLStorm only works against PHP SAML libraries"
+    ],
+    ans: 1,
+    exp: "<strong>SAMLStorm exploits a split-parser perspective.</strong> xml-crypto verifies one part of the XML while node-saml extracts the assertion from a different part. Classic XSW moves signed elements around — SAMLStorm keeps the signature intact and corrupts what gets read."
+  },
+  {
+    q: "In CVE-2025-29775, what does the attacker inject into the DigestValue element?",
+    code: null,
+    opts: [
+      "A second Base64-encoded hash",
+      "An XML comment before the real hash",
+      "A CDATA section containing admin credentials",
+      "A duplicate Assertion element"
+    ],
+    ans: 1,
+    exp: "<strong>An XML comment</strong> — like <code>&lt;!--forged--&gt;</code> — is inserted before the real hash value. xml-crypto 6.0.0 ignores the comment and reads only the text node after it (the real hash), so the digest check passes even though the assertion content was changed."
+  },
+  {
+    q: "Which value does the attacker use as the DigestValue in the fake SignedInfo for CVE-2025-29774?",
+    code: null,
+    opts: [
+      "A copy of the original assertion's hash",
+      "A randomly generated Base64 string",
+      "SHA256 of an empty string — always the same, always valid",
+      "The IdP's public certificate fingerprint"
+    ],
+    ans: 2,
+    exp: "<strong>SHA256(\"\") = 47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=</strong> — the hash of an empty string. The fake SignedInfo references a non-existent element (#fake), so the reference resolves to nothing, and SHA256 of nothing is this predictable constant. xml-crypto validates it and moves on."
+  },
+  {
+    q: "Why can a regular authenticated user exploit SAMLStorm to become admin?",
+    code: null,
+    opts: [
+      "They steal the admin's session cookie during login",
+      "They intercept and replay the admin's SAML assertion",
+      "They modify their own valid SAML response in transit, swapping the NameID to admin while keeping the signature check passing",
+      "They brute-force the admin's password at the IdP"
+    ],
+    ans: 2,
+    exp: "The attacker logs in normally, intercepts their own SAMLResponse (e.g. via Burp Suite), modifies the NameID to 'admin', and uses one of the two CVE techniques to make the signature check still pass. The SP then creates a session for 'admin' — without the attacker ever touching admin's credentials."
+  },
+  {
+    q: "What is the minimum fix required to patch CVE-2025-29775 and CVE-2025-29774?",
+    code: null,
+    opts: [
+      "Upgrade node-saml to the latest major version",
+      "Disable IdP-initiated SSO",
+      "Upgrade xml-crypto to version 6.0.1 or later",
+      "Switch from HTTP-POST binding to HTTP-Redirect binding"
+    ],
+    ans: 2,
+    exp: "<strong>xml-crypto 6.0.1</strong> was released the same day as the CVE disclosure. It rejects XML comments in DigestValue elements and throws an error when more than one SignedInfo node is present. One version bump — that's the entire fix."
+  },
+  {
+    q: "What does the server log reveal about a successful SAMLStorm exploit?",
+    code: `nameID: 'admin',
+email: 'user1@company.com',
+eduPersonAffiliation: 'group1'`,
+    opts: [
+      "The nameID and email both say 'admin', revealing a full identity takeover",
+      "The nameID is 'admin' but the other attributes still belong to user1 — the IdP attributes weren't touched",
+      "All fields are empty — the assertion was completely wiped",
+      "The log shows two separate sessions being merged"
+    ],
+    ans: 1,
+    exp: "The NameID becomes 'admin' but <strong>all other IdP attributes stay from the original user</strong> (user1's email, group membership etc.). Only the identifier was swapped. This is a useful forensic signal — if you see a NameID that doesn't match the email domain or group, something is wrong."
+  },
+  {
+    q: "How does 'The Fragile Lock' (Dec 2025) differ from SAMLStorm in terms of attack prerequisites?",
+    code: null,
+    opts: [
+      "The Fragile Lock requires admin-level access to the IdP",
+      "SAMLStorm requires no account; The Fragile Lock requires a valid login",
+      "SAMLStorm requires a valid login; The Fragile Lock only needs public IdP metadata",
+      "Both require the same prerequisites — a valid IdP account"
+    ],
+    ans: 2,
+    exp: "<strong>SAMLStorm needs a valid login</strong> to obtain and tamper with a real SAMLResponse. <strong>The Fragile Lock (CVE-2025-66568)</strong> only requires access to public IdP metadata — making it significantly more dangerous as it's exploitable without any account on the target system."
+  },
+  {
+    q: "Beyond patching, which monitoring approach best detects a SAMLStorm exploitation attempt in production?",
+    code: null,
+    opts: [
+      "Rate-limiting the ACS endpoint to 10 requests per minute",
+      "Monitoring for XML responses larger than 10KB",
+      "Logging raw SAMLResponses at the ACS endpoint and alerting on NameIDs that don't match the session's IdP attributes",
+      "Requiring HTTPS for all SAML traffic"
+    ],
+    ans: 2,
+    exp: "The forensic signature of SAMLStorm is a <strong>mismatch between NameID and other IdP attributes</strong> (email, groups). Logging raw SAMLResponses gives you the ability to spot injected comments or duplicate SignedInfo nodes. Rate limiting and HTTPS are good hygiene but won't catch this attack."
+  }
+];
+
+let cur = 0, score = 0, answered = false;
+
+function render() {
+  const q = questions[cur];
+  const wrap = document.getElementById('qwrap');
+  wrap.innerHTML = `
+    <div class="question active">
+      <div class="q-num">question ${cur+1} of ${questions.length}</div>
+      <div class="q-text">${q.q}</div>
+      ${q.code ? `<div class="q-code">${q.code}</div>` : ''}
+      <div class="options">
+        ${q.opts.map((o,i) => `
+          <button class="option" onclick="pick(this,${i})" data-idx="${i}">
+            <span class="opt-key">${String.fromCharCode(65+i)}</span>${o}
+          </button>`).join('')}
+      </div>
+      <div class="explanation" id="exp">${q.exp}</div>
+    </div>`;
+  document.getElementById('qnext').disabled = true;
+  answered = false;
+  updateBar();
+}
+
+function pick(el, idx) {
+  if (answered) return;
+  answered = true;
+  const q = questions[cur];
+  document.querySelectorAll('.option').forEach(o => o.disabled = true);
+  if (idx === q.ans) { el.classList.add('correct'); score++; }
+  else { el.classList.add('wrong'); document.querySelectorAll('.option')[q.ans].classList.add('correct'); }
+  document.getElementById('exp').classList.add('show');
+  document.getElementById('qnext').disabled = false;
+  document.getElementById('qscore').textContent = `score: ${score}`;
+}
+
+function nextQ() {
+  cur++;
+  if (cur >= questions.length) { showResult(); return; }
+  render();
+}
+
+function showResult() {
+  document.getElementById('qwrap').style.display = 'none';
+  document.getElementById('qnav').style.display = 'none';
+  const el = document.getElementById('qresult');
+  el.style.display = 'block';
+  const pct = Math.round(score / questions.length * 100);
+  document.getElementById('rscore').textContent = `${score}/${questions.length}`;
+  document.getElementById('rmsg').textContent =
+    pct >= 87 ? "sharp — you understand how SAMLStorm actually works." :
+    pct >= 62 ? "solid — go back through the XML diff sections and try again." :
+    "keep at it — re-read the trust chain and CVE sections, then retry.";
+  document.getElementById('qbar').style.width = '100%';
+}
+
+function resetQuiz() {
+  cur = 0; score = 0; answered = false;
+  document.getElementById('qwrap').style.display = 'block';
+  document.getElementById('qnav').style.display = 'flex';
+  document.getElementById('qresult').style.display = 'none';
+  document.getElementById('qscore').textContent = 'score: 0';
+  render();
+}
+
+function updateBar() {
+  document.getElementById('qbar').style.width = ((cur+1)/questions.length*100) + '%';
+  document.getElementById('qprog').textContent = `${cur+1} / ${questions.length}`;
+}
+
+// scroll animation
+const obs = new IntersectionObserver(entries => {
   entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
 }, { threshold: 0.08 });
-document.querySelectorAll('.section').forEach(s => io.observe(s));
+document.querySelectorAll('.section').forEach(s => obs.observe(s));
+
+render();
 </script>
 </body>
 </html>
