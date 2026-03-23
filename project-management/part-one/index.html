@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Management · Part 1 — learn.niklas-heringer.com</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #09100f;
+  --bg2:     #0e1a18;
+  --bg3:     #132420;
+  --border:  #1e3530;
+  --accent:  #22c997;
+  --accent2: #0ea5a0;
+  --text:    #ddeee8;
+  --muted:   #4d7a6e;
+  --muted2:  #8ab8a8;
+  --mono:    'JetBrains Mono', monospace;
+  --sans:    'Fraunces', serif;
+  --gold:    #e5c07b;
+  --amber:   #f0a050;
+  --red:     #e05555;
+  --blue:    #4a9eff;
+  --purple:  #9f7aea;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 15px; line-height: 1.65; min-height: 100vh; }
+
+/* ── grid bg ── */
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+}
+body::after {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image: linear-gradient(rgba(34,201,151,0.018) 1px,transparent 1px), linear-gradient(90deg,rgba(34,201,151,0.018) 1px,transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* ── NAV ── */
+nav {
+  border-bottom: 1px solid var(--border);
+  background: rgba(9,16,15,0.92);
+  backdrop-filter: blur(14px);
+  position: sticky; top: 0; z-index: 100;
+}
+.nav-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 24px; max-width: 1100px; margin: 0 auto;
+}
+.nav-left  { display: flex; align-items: center; gap: 12px; }
+.nav-logo  { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--accent); text-decoration: none; letter-spacing: -0.02em; }
+.nav-logo span { color: var(--muted); font-weight: 400; }
+.nav-back  { font-family: var(--mono); font-size: 11px; color: var(--muted); text-decoration: none; border: 1px solid var(--border); padding: 5px 12px; border-radius: 6px; transition: .2s; }
+.nav-back:hover { color: var(--accent); border-color: var(--accent); }
+.nav-badge { font-family: var(--mono); font-size: 10px; padding: 3px 10px; border-radius: 20px; border: 1px solid rgba(34,201,151,.3); color: var(--accent); background: rgba(34,201,151,.07); letter-spacing: .06em; }
+
+/* ── HERO ── */
+.hero {
+  position: relative; z-index: 1;
+  max-width: 1100px; margin: 0 auto;
+  padding: 60px 24px 48px;
+  border-bottom: 1px solid var(--border);
+}
+.hero-eyebrow { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+.eyebrow-dot  { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: blink 2.5s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1;} 50%{opacity:.25;} }
+.eyebrow-text { font-family: var(--mono); font-size: 11px; color: var(--gold); letter-spacing: .14em; text-transform: uppercase; }
+.hero h1 {
+  font-size: clamp(28px, 5vw, 54px);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -.02em;
+  margin-bottom: 18px;
+}
+.hero h1 .dim  { color: var(--muted); font-weight: 300; }
+.hero h1 .hl   { color: var(--accent); }
+.hero-sub { font-size: 15px; color: var(--muted2); max-width: 580px; margin-bottom: 28px; font-weight: 300; line-height: 1.75; }
+.hero-sub strong { color: var(--gold); font-weight: 600; }
+.hero-meta { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; }
+.meta-pill  { font-family: var(--mono); font-size: 11px; color: var(--muted2); display: flex; align-items: center; gap: 6px; }
+.meta-pill::before { content: '·'; color: var(--muted); }
+.meta-pill:first-child::before { display: none; }
+.topic-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+.tpill { font-family: var(--mono); font-size: 10px; padding: 4px 12px; border-radius: 20px; border: 1px solid; letter-spacing: .05em; cursor: pointer; transition: all .2s; user-select: none; }
+.tpill[data-tab="alle"]         { border-color: rgba(34,201,151,.3);  color: var(--accent);  background: rgba(34,201,151,.06); }
+.tpill[data-tab="stacey"]       { border-color: rgba(74,158,255,.3);  color: var(--blue);   background: rgba(74,158,255,.06); }
+.tpill[data-tab="planung"]      { border-color: rgba(159,122,234,.3); color: var(--purple); background: rgba(159,122,234,.06); }
+.tpill[data-tab="terminplan"]   { border-color: rgba(224,85,85,.3);   color: var(--red);    background: rgba(224,85,85,.06); }
+.tpill[data-tab="meilensteine"] { border-color: rgba(240,160,80,.3);  color: var(--amber);  background: rgba(240,160,80,.06); }
+.tpill[data-tab="pruefung"]     { border-color: rgba(229,192,123,.3); color: var(--gold);   background: rgba(229,192,123,.06); }
+.tpill.active { opacity: 1; }
+.tpill[data-tab="alle"].active         { background: var(--accent);  color: #09100f; border-color: var(--accent); }
+.tpill[data-tab="stacey"].active       { background: var(--blue);    color: #fff;    border-color: var(--blue); }
+.tpill[data-tab="planung"].active      { background: var(--purple);  color: #fff;    border-color: var(--purple); }
+.tpill[data-tab="terminplan"].active   { background: var(--red);     color: #fff;    border-color: var(--red); }
+.tpill[data-tab="meilensteine"].active { background: var(--amber);   color: #09100f; border-color: var(--amber); }
+.tpill[data-tab="pruefung"].active     { background: var(--gold);    color: #09100f; border-color: var(--gold); }
+
+/* ── MAIN ── */
+.main  { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 48px 24px 64px; }
+
+/* ── SECTION HEADER ── */
+.sec-head {
+  display: flex; align-items: center; gap: 14px;
+  margin: 48px 0 20px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: .15em;
+  text-transform: uppercase; color: var(--muted);
+}
+.sec-head:first-child { margin-top: 0; }
+.sec-line { flex: 1; height: 1px; background: var(--border); }
+.sec-icon { font-size: 16px; }
+
+/* ── GRID ── */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 16px; }
+.span-2 { grid-column: 1/-1; }
+
+@media (max-width: 700px) {
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .span-2 { grid-column: 1; }
+}
+
+/* ── CARDS ── */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 22px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color .2s;
+}
+.card:hover { border-color: rgba(34,201,151,.25); }
+.card::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(135deg, rgba(34,201,151,.03) 0%, transparent 60%);
+}
+.card-label { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.card-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.card-icon  { width: 26px; height: 26px; background: var(--bg3); border: 1px solid var(--border); border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+
+/* accent bars on cards */
+.card.accent-green  { border-left: 3px solid var(--accent); }
+.card.accent-blue   { border-left: 3px solid var(--blue); }
+.card.accent-purple { border-left: 3px solid var(--purple); }
+.card.accent-red    { border-left: 3px solid var(--red); }
+.card.accent-amber  { border-left: 3px solid var(--amber); }
+.card.accent-gold   { border-left: 3px solid var(--gold); }
+
+/* ── DEFINITION ── */
+.def {
+  background: var(--bg3); border-left: 3px solid var(--purple);
+  border-radius: 0 8px 8px 0; padding: 10px 14px;
+  font-size: 13px; color: var(--muted2); font-style: italic;
+  margin-bottom: 14px; line-height: 1.6;
+}
+
+/* ── LIST ── */
+ul.kp { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+ul.kp li { font-size: 13px; color: var(--muted2); display: flex; gap: 8px; align-items: flex-start; line-height: 1.5; }
+ul.kp li::before { content: '▸'; color: var(--accent); font-size: 10px; margin-top: 3px; flex-shrink: 0; }
+ul.kp li b { color: var(--text); }
+
+/* ── NOTE ── */
+.note {
+  background: linear-gradient(135deg,#0e1e2a,#0e1a22);
+  border: 1px solid #1e3a50;
+  border-radius: 9px; padding: 12px 14px;
+  margin-top: 14px; font-size: 12px; color: #7aa8c8; line-height: 1.65;
+}
+.note b { color: #a8d0f0; }
+
+/* ── QUAD ── */
+.quad { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.quad-item { background: var(--bg3); border: 1px solid var(--border); border-radius: 9px; padding: 12px 14px; }
+.quad-label { font-weight: 700; font-size: 13px; margin-bottom: 5px; }
+.quad-desc  { font-size: 11px; color: var(--muted2); margin-bottom: 6px; line-height: 1.4; }
+.quad-method{ font-size: 11px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 6px; }
+
+/* ── CHAIN ── */
+.chain { display: flex; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+.chain-step { flex: 1; padding: 12px 10px; text-align: center; border-right: 1px solid var(--border); background: var(--bg3); transition: background .2s; }
+.chain-step:last-child { border-right: none; }
+.chain-step:hover { background: var(--border); }
+.chain-step strong { display: block; font-size: 12px; color: var(--text); margin-bottom: 4px; }
+.chain-step span   { display: block; font-size: 10px; color: var(--muted); line-height: 1.4; }
+.chain-arrow { display: flex; align-items: center; justify-content: center; padding: 0 4px; color: var(--muted); font-size: 14px; background: var(--bg3); border-right: 1px solid var(--border); }
+
+/* ── SPLIT ── */
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.split-col { background: var(--bg3); border-radius: 9px; padding: 12px 14px; border: 1px solid var(--border); }
+.split-col-title { font-weight: 600; font-size: 12px; margin-bottom: 10px; padding-bottom: 7px; border-bottom: 1px solid var(--border); }
+@media (max-width: 580px) { .split, .quad { grid-template-columns: 1fr; } }
+
+/* ── TASK GRID ── */
+.task-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.task-item { background: var(--bg3); border-radius: 9px; padding: 11px 13px; border: 1px solid var(--border); }
+.task-n { font-family: var(--mono); font-size: 10px; color: var(--purple); margin-bottom: 4px; }
+.task-t { font-weight: 600; font-size: 12px; margin-bottom: 5px; color: var(--text); }
+.task-d { font-size: 11px; color: var(--muted); line-height: 1.45; }
+@media (max-width: 580px) { .task-grid { grid-template-columns: 1fr 1fr; } }
+
+/* ── FORMULA BOX ── */
+.formula-box { background: #090e1c; border: 1px solid #1e3060; border-radius: 9px; padding: 12px 16px; margin-bottom: 10px; font-family: var(--mono); }
+.formula-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 5px; }
+.formula-eq    { font-size: 14px; color: #7ab8ff; font-weight: 700; }
+
+/* ── DEF CARDS ── */
+.def-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.def-card  { background: var(--bg3); border-radius: 9px; padding: 13px 14px; border: 1px solid var(--border); }
+.def-card-term { font-weight: 700; font-size: 12px; color: var(--accent); margin-bottom: 6px; }
+.def-card-body { font-size: 11px; color: var(--muted2); line-height: 1.55; }
+@media (max-width: 580px) { .def-cards { grid-template-columns: 1fr; } }
+
+/* ── QUIZ ── */
+.quiz-item { background: var(--bg3); border-radius: 9px; border: 1px solid var(--border); margin-bottom: 8px; overflow: hidden; }
+.quiz-q    { padding: 12px 16px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 10px; user-select: none; transition: background .15s; }
+.quiz-q:hover { background: var(--border); }
+.quiz-arrow { font-size: 11px; color: var(--muted); transition: transform .2s; flex-shrink: 0; }
+.quiz-item.open .quiz-arrow { transform: rotate(90deg); }
+.quiz-a    { display: none; padding: 12px 16px; font-size: 13px; color: var(--muted2); border-top: 1px solid var(--border); background: #0c1512; line-height: 1.7; }
+.quiz-item.open .quiz-a { display: block; }
+.quiz-a ul { list-style: disc; padding-left: 18px; margin-top: 6px; }
+.quiz-a ul li { margin-bottom: 4px; font-size: 12px; }
+.quiz-a code { background: #0e1e30; border-radius: 4px; padding: 1px 6px; font-family: var(--mono); font-size: 11px; color: #80b8ff; }
+.quiz-a strong { color: var(--text); }
+
+/* ── TIP GRID ── */
+.tip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tip-item { background: var(--bg3); border-radius: 9px; padding: 13px 14px; border: 1px solid var(--border); }
+.tip-icon  { font-size: 17px; margin-bottom: 5px; }
+.tip-title { font-weight: 600; font-size: 12px; margin-bottom: 6px; color: var(--amber); }
+.tip-text  { font-size: 11px; color: var(--muted2); line-height: 1.6; }
+@media (max-width: 580px) { .tip-grid { grid-template-columns: 1fr; } }
+
+/* ── SVG SCROLL ── */
+.svg-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 9px; margin-top: 14px; }
+
+/* ── SYNTHESE ── */
+.synth-row { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.synth-row:last-child { border-bottom: none; }
+.synth-num { font-family: var(--mono); font-size: 12px; color: var(--accent); font-weight: 700; flex-shrink: 0; width: 24px; }
+.synth-body { font-size: 13px; color: var(--muted2); line-height: 1.6; }
+.synth-body b { color: var(--text); }
+
+/* ── HIDDEN ── */
+.section-block { transition: opacity .15s; }
+.section-block.hidden { display: none; }
+
+/* ── FOOTER ── */
+footer {
+  position: relative; z-index: 1;
+  border-top: 1px solid var(--border);
+  padding: 24px;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+footer a { color: var(--muted2); text-decoration: none; transition: color .2s; }
+footer a:hover { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav>
+  <div class="nav-inner">
+    <div class="nav-left">
+      <a class="nav-logo" href="https://learn.niklas-heringer.com">learn<span>.niklas-heringer.com</span></a>
+      <span class="nav-badge">project management</span>
+    </div>
+    <a class="nav-back" href="https://learn.niklas-heringer.com">← index</a>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<div class="hero">
+  <div class="hero-eyebrow">
+    <span class="eyebrow-dot"></span>
+    <span class="eyebrow-text">Project Management · Fundamentals</span>
+  </div>
+  <h1>Project Management<br><span class="dim">— </span><span class="hl">Part 1</span></h1>
+  <p class="hero-sub">
+    Core concepts for classical project planning. Topics: <strong>Stacey Matrix</strong>, the classical <strong>planning chain</strong>,
+    <strong>network diagrams</strong>, <strong>Gantt charts</strong> and <strong>milestones</strong> — plus exam prep with quiz questions.
+  </p>
+  <div class="hero-meta">
+    <span class="meta-pill">5 Topics</span>
+    <span class="meta-pill">8 Quiz Questions</span>
+    <span class="meta-pill">2 SVG Diagrams</span>
+  </div>
+
+  <div class="topic-pills">
+    <span class="tpill active" data-tab="alle">All</span>
+    <span class="tpill" data-tab="stacey">🧭 Stacey Matrix</span>
+    <span class="tpill" data-tab="planung">📋 Planning</span>
+    <span class="tpill" data-tab="terminplan">📅 Schedule</span>
+    <span class="tpill" data-tab="meilensteine">🏁 Milestones</span>
+    <span class="tpill" data-tab="pruefung">🎯 Exam Prep</span>
+  </div>
+</div>
+
+<!-- ── MAIN ── -->
+<main class="main">
+
+<!-- ════════════════════════════════
+     STACEY
+════════════════════════════════ -->
+<div class="section-block" data-section="stacey">
+  <div class="sec-head">
+    <span class="sec-icon">🧭</span>
+    <span>Stacey Matrix</span>
+    <div class="sec-line"></div>
+  </div>
+
+  <div class="card span-2 accent-blue">
+    <div class="card-label">Model · Project Complexity</div>
+    <div class="card-title"><span class="card-icon">🧭</span>Stacey Matrix</div>
+    <p style="color:var(--muted2);font-size:13px;margin-bottom:14px">
+      Two-axis model for classifying projects by <b style="color:var(--text)">What / Requirements</b> (clear ↔ unclear)
+      and <b style="color:var(--text)">How / Approach</b> (known ↔ untested). Determines the appropriate PM method.
+    </p>
+    <div class="quad">
+      <div class="quad-item"><div class="quad-label" style="color:#22c997">🟢 Simple</div><div class="quad-desc">What &amp; How are clear and known</div><div class="quad-method">→ Standard approach, predictable flow</div></div>
+      <div class="quad-item"><div class="quad-label" style="color:var(--blue)">🔵 Complicated</div><div class="quad-desc">Causality is linear, but combination needed</div><div class="quad-method">→ Classical PM + complementary methods (e.g. Lean)</div></div>
+      <div class="quad-item"><div class="quad-label" style="color:var(--amber)">🟡 Complex</div><div class="quad-desc">Unpredictable flow, many interdependencies &amp; risks</div><div class="quad-method">→ Agile methods — high flexibility required</div></div>
+      <div class="quad-item"><div class="quad-label" style="color:var(--red)">🔴 Chaotic</div><div class="quad-desc">Edge of innovation, barely plannable</div><div class="quad-method">→ Goal: move into "complex" zone</div></div>
+    </div>
+
+    <div class="svg-scroll">
+      <svg viewBox="0 0 500 320" xmlns="http://www.w3.org/2000/svg" style="width:100%;min-width:360px;display:block;border-radius:8px;background:#070d0c" font-family="JetBrains Mono,monospace">
+        <defs><clipPath id="plotclip"><rect x="72" y="22" width="390" height="254"/></clipPath></defs>
+        <rect x="72" y="22" width="390" height="254" fill="#e05555" fill-opacity="0.07" clip-path="url(#plotclip)"/>
+        <path d="M72,276 L72,76 A200,200 0 0,1 272,276 Z" fill="#f0a050" fill-opacity="0.10" clip-path="url(#plotclip)"/>
+        <path d="M72,276 L72,176 A100,100 0 0,1 172,276 Z" fill="#4a9eff" fill-opacity="0.12" clip-path="url(#plotclip)"/>
+        <path d="M72,276 L72,176 A100,100 0 0,1 172,276 Z" fill="#22c997" fill-opacity="0.18" clip-path="url(#plotclip)"/>
+        <path d="M72,176 A100,100 0 0,1 172,276" fill="none" stroke="#22c997" stroke-width="1.5" stroke-dasharray="5,3" clip-path="url(#plotclip)"/>
+        <path d="M72,76 A200,200 0 0,1 272,276" fill="none" stroke="#4a9eff" stroke-width="1.5" stroke-dasharray="5,3" clip-path="url(#plotclip)"/>
+        <path d="M72,276 m0,-330 A330,330 0 0,1 402,276" fill="none" stroke="#f0a050" stroke-width="1.5" stroke-dasharray="5,3" clip-path="url(#plotclip)"/>
+        <line x1="72" y1="276" x2="462" y2="276" stroke="#22c997" stroke-width="1.8"/>
+        <line x1="72" y1="276" x2="72"  y2="18"  stroke="#22c997" stroke-width="1.8"/>
+        <polygon points="458,272 468,276 458,280" fill="#22c997"/>
+        <polygon points="68,19 72,8 76,19"       fill="#22c997"/>
+        <text x="75"  y="293" font-size="9" fill="#4d7a6e">clear, known</text>
+        <text x="460" y="293" font-size="9" fill="#4d7a6e" text-anchor="end">unclear, untested</text>
+        <text x="68"  y="279" font-size="9" fill="#4d7a6e" text-anchor="end">clear</text>
+        <text x="68"  y="32"  font-size="9" fill="#4d7a6e" text-anchor="end">unclear</text>
+        <text x="265" y="312" font-size="11" fill="#22c997" text-anchor="middle" font-weight="600">How / Approach</text>
+        <text x="20"  y="149" font-size="11" fill="#22c997" text-anchor="middle" font-weight="600" transform="rotate(-90,20,149)">What / Requirements</text>
+        <text x="105" y="262" font-size="13" fill="#22c997" font-weight="700">simple</text>
+        <text x="155" y="198" font-size="13" fill="#4a9eff" font-weight="700">complicated</text>
+        <text x="255" y="138" font-size="13" fill="#f0a050" font-weight="700">complex</text>
+        <text x="355" y="70"  font-size="13" fill="#e05555" font-weight="700">chaotic</text>
+      </svg>
+    </div>
+    <div class="note"><b>Key insight:</b> The higher the complexity according to the Stacey Matrix, the harder the effort estimation — and the more agile methods have the advantage.</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════
+     PLANUNG
+════════════════════════════════ -->
+<div class="section-block" data-section="planung">
+  <div class="sec-head">
+    <span class="sec-icon">📋</span>
+    <span>Planning — Sequence &amp; Effort</span>
+    <div class="sec-line"></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card accent-purple">
+      <div class="card-label">Concept</div>
+      <div class="card-title"><span class="card-icon">📋</span>Sequence Plan</div>
+      <div class="def">Puts the WBS elements into an actionable order.</div>
+      <ul class="kp">
+        <li>Prerequisite: dependencies between work packages known</li>
+        <li>Foundation for schedule and resource planning</li>
+        <li>Key questions: Which WPs must finish first? Which run in parallel?</li>
+        <li><b>WBS</b> shows <em>What</em> — <b>Sequence Plan</b> shows <em>In what order</em></li>
+      </ul>
+    </div>
+    <div class="card accent-purple">
+      <div class="card-label">Concept</div>
+      <div class="card-title"><span class="card-icon">⏱</span>Effort Estimation</div>
+      <ul class="kp">
+        <li>Created for each element of the sequence plan</li>
+        <li>The more complex (→ Stacey), the harder the estimation</li>
+        <li>No exact method — best done by experts</li>
+        <li>Result feeds directly into the project schedule</li>
+        <li>Typical unit: <b>weeks per work package</b></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card span-2 accent-green">
+    <div class="card-label">Overview</div>
+    <div class="card-title"><span class="card-icon">🔗</span>Planning Chain at a Glance</div>
+    <div class="chain">
+      <div class="chain-step"><strong>WBS</strong><span>What are the work packages?</span></div>
+      <div class="chain-arrow">→</div>
+      <div class="chain-step"><strong>Sequence Plan</strong><span>In what order?</span></div>
+      <div class="chain-arrow">→</div>
+      <div class="chain-step"><strong>Effort Estimation</strong><span>How long does each WP take?</span></div>
+      <div class="chain-arrow">→</div>
+      <div class="chain-step"><strong>Project Schedule</strong><span>When exactly? With buffer &amp; milestones</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════
+     TERMINPLAN
+════════════════════════════════ -->
+<div class="section-block" data-section="terminplan">
+  <div class="sec-head">
+    <span class="sec-icon">📅</span>
+    <span>Project Schedule &amp; Critical Path</span>
+    <div class="sec-line"></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card accent-red">
+      <div class="card-label">Concept</div>
+      <div class="card-title"><span class="card-icon">📅</span>Project Schedule</div>
+      <div class="def">Derived from the project time horizon, sequence plan and effort estimation.</div>
+      <ul class="kp">
+        <li>Shows each activity with a concrete <b>start and end date</b></li>
+        <li>Does <b>not</b> include a view of available resources</li>
+        <li>Constraints to consider: calendar, holidays, steering committees</li>
+        <li>Formats: <b>Network diagram</b> or <b>Gantt chart</b></li>
+      </ul>
+    </div>
+    <div class="card accent-red">
+      <div class="card-label">Concept</div>
+      <div class="card-title"><span class="card-icon">🛡</span>Buffer / Float</div>
+      <div class="def">Time allowance for delays without impact on subsequent activities or the project end.</div>
+      <ul class="kp">
+        <li>Protects the schedule against unforeseen delays</li>
+        <li>Activities <b style="color:var(--red)">without buffer</b> lie on the critical path</li>
+        <li>Deliberately planning buffer = good project management</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card span-2 accent-red" style="margin-bottom:16px">
+    <div class="card-label">Core Concept</div>
+    <div class="card-title"><span class="card-icon">🔴</span>Critical Path</div>
+    <p style="color:var(--muted2);font-size:13px;margin-bottom:12px">The longest sequence of activities that determines the project end. WPs on it have <b style="color:var(--red)">TF = 0</b> (no total float).</p>
+    <div class="split" style="margin-bottom:12px">
+      <div class="split-col">
+        <div class="split-col-title" style="color:var(--red)">⚠ On the critical path</div>
+        <ul class="kp">
+          <li>TF = 0 — any delay endangers the project end</li>
+          <li>Requires highest management attention</li>
+          <li>Assign resources with priority</li>
+        </ul>
+      </div>
+      <div class="split-col">
+        <div class="split-col-title" style="color:var(--accent)">✓ Off the critical path</div>
+        <ul class="kp">
+          <li>TF &gt; 0 — delay up to float length is tolerable</li>
+          <li>Provides flexibility in resource allocation</li>
+          <li>Can be treated as lower priority</li>
+        </ul>
+      </div>
+    </div>
+    <div class="note"><b>Formats:</b> <b>Network diagram</b> shows dependencies and critical path explicitly (with ES/EF/LS/LF/TF). <b>Gantt chart</b> shows the time axis and parallelism more intuitively — both complement each other.</div>
+  </div>
+
+  <!-- NETZPLAN -->
+  <div class="card span-2" style="margin-bottom:16px">
+    <div class="card-label">Example · Activity-on-Node Diagram</div>
+    <div class="card-title"><span class="card-icon">🕸</span>Network Diagram — Example Project (simplified)</div>
+    <p style="color:var(--muted2);font-size:11px;margin-bottom:10px">
+      <span style="display:inline-block;width:10px;height:10px;background:#7a1c1c;border:1.5px solid #cc4444;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Critical Path (TF=0) &nbsp;
+      <span style="display:inline-block;width:10px;height:10px;background:#112255;border:1.5px solid #4a6acc;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Non-critical (TF&gt;0) &nbsp;
+      <span style="color:#f0a050">◆</span> Milestone
+    </p>
+    <div class="svg-scroll">
+    <svg viewBox="0 0 760 295" xmlns="http://www.w3.org/2000/svg" style="width:100%;min-width:580px;display:block;background:#070d0c;border-radius:7px" font-family="JetBrains Mono,monospace">
+      <defs>
+        <marker id="arr-red"  markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><polygon points="0,1 7,4 0,7" fill="#cc4444"/></marker>
+        <marker id="arr-blue" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><polygon points="0,1 7,4 0,7" fill="#4a6acc"/></marker>
+      </defs>
+      <!-- Pfeile -->
+      <line x1="126" y1="122" x2="196" y2="60"  stroke="#cc4444" stroke-width="1.8" marker-end="url(#arr-red)"/>
+      <line x1="126" y1="148" x2="196" y2="210" stroke="#4a6acc" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr-blue)"/>
+      <line x1="312" y1="60"  x2="382" y2="122" stroke="#cc4444" stroke-width="1.8" marker-end="url(#arr-red)"/>
+      <line x1="312" y1="210" x2="382" y2="148" stroke="#4a6acc" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr-blue)"/>
+      <line x1="498" y1="135" x2="518" y2="135" stroke="#cc4444" stroke-width="1.8" marker-end="url(#arr-red)"/>
+      <line x1="634" y1="135" x2="652" y2="135" stroke="#cc4444" stroke-width="1.8" marker-end="url(#arr-red)"/>
+      <!-- AP1 -->
+      <rect x="10"  y="100" width="116" height="70" rx="5" fill="#7a1c1c" fill-opacity="0.25" stroke="#cc4444" stroke-width="1.5"/>
+      <line x1="10"  y1="120" x2="126" y2="120" stroke="#883333" stroke-width="0.7"/>
+      <line x1="10"  y1="150" x2="126" y2="150" stroke="#883333" stroke-width="0.7"/>
+      <line x1="46"  y1="100" x2="46"  y2="120" stroke="#883333" stroke-width="0.7"/>
+      <line x1="90"  y1="100" x2="90"  y2="120" stroke="#883333" stroke-width="0.7"/>
+      <line x1="46"  y1="150" x2="46"  y2="170" stroke="#883333" stroke-width="0.7"/>
+      <line x1="90"  y1="150" x2="90"  y2="170" stroke="#883333" stroke-width="0.7"/>
+      <text x="28"  y="113" text-anchor="middle" font-size="9" fill="#cc8888">0</text>
+      <text x="68"  y="113" text-anchor="middle" font-size="9" fill="#aaa">2W</text>
+      <text x="108" y="113" text-anchor="middle" font-size="9" fill="#cc8888">2</text>
+      <text x="68"  y="139" text-anchor="middle" font-size="12" font-weight="700" fill="#f0e8e8">Analysis</text>
+      <text x="28"  y="164" text-anchor="middle" font-size="9" fill="#cc8888">0</text>
+      <text x="68"  y="164" text-anchor="middle" font-size="9" font-weight="700" fill="#22c997">0</text>
+      <text x="108" y="164" text-anchor="middle" font-size="9" fill="#cc8888">2</text>
+      <!-- AP2 -->
+      <rect x="197" y="25"  width="116" height="70" rx="5" fill="#7a1c1c" fill-opacity="0.25" stroke="#cc4444" stroke-width="1.5"/>
+      <line x1="197" y1="45"  x2="313" y2="45"  stroke="#883333" stroke-width="0.7"/>
+      <line x1="197" y1="75"  x2="313" y2="75"  stroke="#883333" stroke-width="0.7"/>
+      <line x1="233" y1="25"  x2="233" y2="45"  stroke="#883333" stroke-width="0.7"/>
+      <line x1="277" y1="25"  x2="277" y2="45"  stroke="#883333" stroke-width="0.7"/>
+      <line x1="233" y1="75"  x2="233" y2="95"  stroke="#883333" stroke-width="0.7"/>
+      <line x1="277" y1="75"  x2="277" y2="95"  stroke="#883333" stroke-width="0.7"/>
+      <text x="215" y="38"  text-anchor="middle" font-size="9" fill="#cc8888">2</text>
+      <text x="255" y="38"  text-anchor="middle" font-size="9" fill="#aaa">3W</text>
+      <text x="295" y="38"  text-anchor="middle" font-size="9" fill="#cc8888">5</text>
+      <text x="255" y="64"  text-anchor="middle" font-size="12" font-weight="700" fill="#f0e8e8">Concept</text>
+      <text x="215" y="88"  text-anchor="middle" font-size="9" fill="#cc8888">2</text>
+      <text x="255" y="88"  text-anchor="middle" font-size="9" font-weight="700" fill="#22c997">0</text>
+      <text x="295" y="88"  text-anchor="middle" font-size="9" fill="#cc8888">5</text>
+      <polygon points="255,100 262,110 255,120 248,110" fill="#f0a050"/>
+      <text x="268" y="114" font-size="8" fill="#e8a020">M1</text>
+      <!-- AP3 -->
+      <rect x="197" y="175" width="116" height="70" rx="5" fill="#112255" fill-opacity="0.5" stroke="#4a6acc" stroke-width="1.5"/>
+      <line x1="197" y1="195" x2="313" y2="195" stroke="#334488" stroke-width="0.7"/>
+      <line x1="197" y1="225" x2="313" y2="225" stroke="#334488" stroke-width="0.7"/>
+      <line x1="233" y1="175" x2="233" y2="195" stroke="#334488" stroke-width="0.7"/>
+      <line x1="277" y1="175" x2="277" y2="195" stroke="#334488" stroke-width="0.7"/>
+      <line x1="233" y1="225" x2="233" y2="245" stroke="#334488" stroke-width="0.7"/>
+      <line x1="277" y1="225" x2="277" y2="245" stroke="#334488" stroke-width="0.7"/>
+      <text x="215" y="188" text-anchor="middle" font-size="9" fill="#8899cc">2</text>
+      <text x="255" y="188" text-anchor="middle" font-size="9" fill="#aaa">1W</text>
+      <text x="295" y="188" text-anchor="middle" font-size="9" fill="#8899cc">3</text>
+      <text x="255" y="214" text-anchor="middle" font-size="11" font-weight="700" fill="#d8e0f8">Stakeholders</text>
+      <text x="215" y="238" text-anchor="middle" font-size="9" fill="#8899cc">4</text>
+      <text x="255" y="238" text-anchor="middle" font-size="9" font-weight="700" fill="#f0a050">2</text>
+      <text x="295" y="238" text-anchor="middle" font-size="9" fill="#8899cc">5</text>
+      <!-- AP4 -->
+      <rect x="383" y="100" width="116" height="70" rx="5" fill="#7a1c1c" fill-opacity="0.25" stroke="#cc4444" stroke-width="1.5"/>
+      <line x1="383" y1="120" x2="499" y2="120" stroke="#883333" stroke-width="0.7"/>
+      <line x1="383" y1="150" x2="499" y2="150" stroke="#883333" stroke-width="0.7"/>
+      <line x1="419" y1="100" x2="419" y2="120" stroke="#883333" stroke-width="0.7"/>
+      <line x1="463" y1="100" x2="463" y2="120" stroke="#883333" stroke-width="0.7"/>
+      <line x1="419" y1="150" x2="419" y2="170" stroke="#883333" stroke-width="0.7"/>
+      <line x1="463" y1="150" x2="463" y2="170" stroke="#883333" stroke-width="0.7"/>
+      <text x="401" y="113" text-anchor="middle" font-size="9" fill="#cc8888">5</text>
+      <text x="441" y="113" text-anchor="middle" font-size="9" fill="#aaa">4W</text>
+      <text x="481" y="113" text-anchor="middle" font-size="9" fill="#cc8888">9</text>
+      <text x="441" y="139" text-anchor="middle" font-size="12" font-weight="700" fill="#f0e8e8">Execution</text>
+      <text x="401" y="164" text-anchor="middle" font-size="9" fill="#cc8888">5</text>
+      <text x="441" y="164" text-anchor="middle" font-size="9" font-weight="700" fill="#22c997">0</text>
+      <text x="481" y="164" text-anchor="middle" font-size="9" fill="#cc8888">9</text>
+      <!-- AP5 -->
+      <rect x="519" y="100" width="116" height="70" rx="5" fill="#7a1c1c" fill-opacity="0.25" stroke="#cc4444" stroke-width="1.5"/>
+      <line x1="519" y1="120" x2="635" y2="120" stroke="#883333" stroke-width="0.7"/>
+      <line x1="519" y1="150" x2="635" y2="150" stroke="#883333" stroke-width="0.7"/>
+      <line x1="555" y1="100" x2="555" y2="120" stroke="#883333" stroke-width="0.7"/>
+      <line x1="599" y1="100" x2="599" y2="120" stroke="#883333" stroke-width="0.7"/>
+      <line x1="555" y1="150" x2="555" y2="170" stroke="#883333" stroke-width="0.7"/>
+      <line x1="599" y1="150" x2="599" y2="170" stroke="#883333" stroke-width="0.7"/>
+      <text x="537" y="113" text-anchor="middle" font-size="9" fill="#cc8888">9</text>
+      <text x="577" y="113" text-anchor="middle" font-size="9" fill="#aaa">2W</text>
+      <text x="617" y="113" text-anchor="middle" font-size="9" fill="#cc8888">11</text>
+      <text x="577" y="139" text-anchor="middle" font-size="12" font-weight="700" fill="#f0e8e8">Test/Pilot</text>
+      <text x="537" y="164" text-anchor="middle" font-size="9" fill="#cc8888">9</text>
+      <text x="577" y="164" text-anchor="middle" font-size="9" font-weight="700" fill="#22c997">0</text>
+      <text x="617" y="164" text-anchor="middle" font-size="9" fill="#cc8888">11</text>
+      <polygon points="441,175 448,185 441,195 434,185" fill="#f0a050"/>
+      <text x="454" y="189" font-size="8" fill="#e8a020">M2</text>
+      <!-- AP6 -->
+      <rect x="652" y="100" width="100" height="70" rx="5" fill="#7a1c1c" fill-opacity="0.25" stroke="#cc4444" stroke-width="1.5"/>
+      <line x1="652" y1="120" x2="752" y2="120" stroke="#883333" stroke-width="0.7"/>
+      <line x1="652" y1="150" x2="752" y2="150" stroke="#883333" stroke-width="0.7"/>
+      <line x1="688" y1="100" x2="688" y2="120" stroke="#883333" stroke-width="0.7"/>
+      <line x1="720" y1="100" x2="720" y2="120" stroke="#883333" stroke-width="0.7"/>
+      <line x1="688" y1="150" x2="688" y2="170" stroke="#883333" stroke-width="0.7"/>
+      <line x1="720" y1="150" x2="720" y2="170" stroke="#883333" stroke-width="0.7"/>
+      <text x="670" y="113" text-anchor="middle" font-size="9" fill="#cc8888">11</text>
+      <text x="704" y="113" text-anchor="middle" font-size="9" fill="#aaa">1W</text>
+      <text x="738" y="113" text-anchor="middle" font-size="9" fill="#cc8888">12</text>
+      <text x="704" y="139" text-anchor="middle" font-size="11" font-weight="700" fill="#f0e8e8">Closure</text>
+      <text x="670" y="164" text-anchor="middle" font-size="9" fill="#cc8888">11</text>
+      <text x="704" y="164" text-anchor="middle" font-size="9" font-weight="700" fill="#22c997">0</text>
+      <text x="738" y="164" text-anchor="middle" font-size="9" fill="#cc8888">12</text>
+      <polygon points="704,175 711,185 704,195 697,185" fill="#f0a050"/>
+      <text x="717" y="189" font-size="8" fill="#e8a020">M4</text>
+      <!-- Legende -->
+      <rect x="10" y="250" width="64" height="38" rx="3" fill="#7a1c1c" fill-opacity="0.2" stroke="#cc4444" stroke-width="0.8"/>
+      <line x1="10" y1="262" x2="74" y2="262" stroke="#883333" stroke-width="0.5"/>
+      <line x1="10" y1="277" x2="74" y2="277" stroke="#883333" stroke-width="0.5"/>
+      <line x1="31" y1="250" x2="31" y2="262" stroke="#883333" stroke-width="0.5"/>
+      <line x1="53" y1="250" x2="53" y2="262" stroke="#883333" stroke-width="0.5"/>
+      <line x1="31" y1="277" x2="31" y2="288" stroke="#883333" stroke-width="0.5"/>
+      <line x1="53" y1="277" x2="53" y2="288" stroke="#883333" stroke-width="0.5"/>
+      <text x="21" y="260" text-anchor="middle" font-size="6.5" fill="#888">ES</text>
+      <text x="42" y="260" text-anchor="middle" font-size="6.5" fill="#888">D</text>
+      <text x="63" y="260" text-anchor="middle" font-size="6.5" fill="#888">EF</text>
+      <text x="42" y="272" text-anchor="middle" font-size="6.5" fill="#aaa">Name</text>
+      <text x="21" y="286" text-anchor="middle" font-size="6.5" fill="#888">LS</text>
+      <text x="42" y="286" text-anchor="middle" font-size="6.5" fill="#22c997">TF</text>
+      <text x="63" y="286" text-anchor="middle" font-size="6.5" fill="#888">LF</text>
+      <text x="82" y="261" font-size="8" fill="#4d7a6e">ES/EF = Earliest Start/Finish</text>
+      <text x="82" y="273" font-size="8" fill="#4d7a6e">LS/LF = Latest Start/Finish</text>
+      <text x="82" y="285" font-size="8" fill="#4d7a6e">D = Duration · <tspan fill="#22c997">TF=0</tspan> → critical · <tspan fill="#f0a050">TF&gt;0</tspan> → float available</text>
+    </svg>
+    </div>
+  </div>
+
+  <!-- GANTT -->
+  <div class="card span-2">
+    <div class="card-label">Example · Project Schedule</div>
+    <div class="card-title"><span class="card-icon">📊</span>Gantt Chart — Example Project (simplified)</div>
+    <p style="color:var(--muted2);font-size:11px;margin-bottom:10px">
+      <span style="display:inline-block;width:14px;height:10px;background:#882222;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Critical Path &nbsp;
+      <span style="display:inline-block;width:14px;height:10px;background:#223388;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Non-critical &nbsp;
+      <span style="display:inline-block;width:14px;height:10px;background:#223388;opacity:.25;border:1px dashed #4466aa;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Float &nbsp;
+      <span style="color:#f0a050;font-size:13px">◆</span> Milestone
+    </p>
+    <div class="svg-scroll">
+    <svg viewBox="0 0 720 258" xmlns="http://www.w3.org/2000/svg" style="width:100%;min-width:560px;display:block;background:#070d0c;border-radius:7px" font-family="JetBrains Mono,monospace">
+      <rect x="115" y="35"  width="605" height="34" fill="#0d1310"/>
+      <rect x="115" y="103" width="605" height="34" fill="#0d1310"/>
+      <rect x="115" y="171" width="605" height="34" fill="#0d1310"/>
+      <line x1="115" y1="35"  x2="115" y2="241" stroke="#1e3530" stroke-width="0.8"/>
+      <line x1="165" y1="35"  x2="165" y2="241" stroke="#1e3530" stroke-width="0.8"/>
+      <line x1="215" y1="35"  x2="215" y2="241" stroke="#1e3530" stroke-width="0.8"/>
+      <line x1="265" y1="35"  x2="265" y2="241" stroke="#1e3530" stroke-width="0.8"/>
+      <line x1="315" y1="35"  x2="315" y2="241" stroke="#1e3530" stroke-width="0.8"/>
+      <line x1="365" y1="35"  x2="365" y2="241" stroke="#1e3530" stroke-width="0.8"/>
+      <line x1="415" y1="35"  x2="415" y2="241" stroke="#1e3530" stroke-width="0.8"/>
+      <line x1="465" y1="35"  x2="465" y2="241" stroke="#1e3530" stroke-width="0.8"/>
+      <line x1="515" y1="35"  x2="515" y2="241" stroke="#1e3530" stroke-width="0.8"/>
+      <line x1="565" y1="35"  x2="565" y2="241" stroke="#1e3530" stroke-width="0.8"/>
+      <line x1="615" y1="35"  x2="615" y2="241" stroke="#1e3530" stroke-width="0.8"/>
+      <line x1="665" y1="35"  x2="665" y2="241" stroke="#1e3530" stroke-width="0.8"/>
+      <line x1="715" y1="35"  x2="715" y2="241" stroke="#1e3530" stroke-width="0.8"/>
+      <line x1="0"   y1="35"  x2="720" y2="35"  stroke="#2a3050" stroke-width="0.8"/>
+      <line x1="0"   y1="69"  x2="720" y2="69"  stroke="#1a2035" stroke-width="0.5"/>
+      <line x1="0"   y1="103" x2="720" y2="103" stroke="#1a2035" stroke-width="0.5"/>
+      <line x1="0"   y1="137" x2="720" y2="137" stroke="#1a2035" stroke-width="0.5"/>
+      <line x1="0"   y1="171" x2="720" y2="171" stroke="#1a2035" stroke-width="0.5"/>
+      <line x1="0"   y1="205" x2="720" y2="205" stroke="#1a2035" stroke-width="0.5"/>
+      <line x1="0"   y1="239" x2="720" y2="239" stroke="#2a3050" stroke-width="0.8"/>
+      <text x="10"  y="26" font-size="9" fill="#2a4038">Weeks →</text>
+      <text x="140" y="26" text-anchor="middle" font-size="9" fill="#4d7a6e">W1–2</text>
+      <text x="240" y="26" text-anchor="middle" font-size="9" fill="#4d7a6e">W3–4</text>
+      <text x="340" y="26" text-anchor="middle" font-size="9" fill="#4d7a6e">W5–6</text>
+      <text x="440" y="26" text-anchor="middle" font-size="9" fill="#4d7a6e">W7–8</text>
+      <text x="540" y="26" text-anchor="middle" font-size="9" fill="#4d7a6e">W9–10</text>
+      <text x="640" y="26" text-anchor="middle" font-size="9" fill="#4d7a6e">W11–12</text>
+      <text x="110" y="57"  text-anchor="end" font-size="10" font-weight="600" fill="#ddeee8">WP1 Analysis</text>
+      <text x="110" y="91"  text-anchor="end" font-size="10" font-weight="600" fill="#ddeee8">WP2 Concept</text>
+      <text x="110" y="125" text-anchor="end" font-size="10"                   fill="#8ab8a8">WP3 Stakeholders</text>
+      <text x="110" y="159" text-anchor="end" font-size="10" font-weight="600" fill="#ddeee8">WP4 Execution</text>
+      <text x="110" y="193" text-anchor="end" font-size="10" font-weight="600" fill="#ddeee8">WP5 Test/Pilot</text>
+      <text x="110" y="227" text-anchor="end" font-size="10" font-weight="600" fill="#ddeee8">WP6 Closure</text>
+      <rect x="116" y="43" width="98"  height="20" rx="3" fill="#882222"/>
+      <text x="165" y="57" text-anchor="middle" font-size="9" fill="#ffaaaa">2W</text>
+      <rect x="216" y="77" width="148" height="20" rx="3" fill="#882222"/>
+      <text x="290" y="91" text-anchor="middle" font-size="9" fill="#ffaaaa">3W</text>
+      <rect x="216" y="111" width="48"  height="20" rx="3" fill="#223388"/>
+      <rect x="266" y="111" width="98"  height="20" rx="3" fill="#223388" fill-opacity="0.22" stroke="#334499" stroke-width="0.8" stroke-dasharray="3,2"/>
+      <text x="240" y="125" text-anchor="middle" font-size="9" fill="#aabbff">1W</text>
+      <text x="315" y="125" text-anchor="middle" font-size="8" fill="#4a5a88">Float 2W</text>
+      <rect x="366" y="145" width="198" height="20" rx="3" fill="#882222"/>
+      <text x="465" y="159" text-anchor="middle" font-size="9" fill="#ffaaaa">4W</text>
+      <rect x="566" y="179" width="98"  height="20" rx="3" fill="#882222"/>
+      <text x="615" y="193" text-anchor="middle" font-size="9" fill="#ffaaaa">2W</text>
+      <rect x="666" y="213" width="48"  height="20" rx="3" fill="#882222"/>
+      <text x="690" y="227" text-anchor="middle" font-size="9" fill="#ffaaaa">1W</text>
+      <!-- Meilensteine -->
+      <line x1="215" y1="35" x2="215" y2="239" stroke="#f0a050" stroke-width="0.8" stroke-dasharray="3,5" opacity="0.4"/>
+      <polygon points="215,43 221,52 215,61 209,52" fill="#f0a050"/>
+      <text x="218" y="248" font-size="8" fill="#c8921a">M1</text>
+      <line x1="365" y1="35" x2="365" y2="239" stroke="#f0a050" stroke-width="0.8" stroke-dasharray="3,5" opacity="0.4"/>
+      <polygon points="365,77 371,86 365,95 359,86" fill="#f0a050"/>
+      <text x="368" y="248" font-size="8" fill="#c8921a">M2</text>
+      <line x1="665" y1="35" x2="665" y2="239" stroke="#f0a050" stroke-width="0.8" stroke-dasharray="3,5" opacity="0.4"/>
+      <polygon points="665,179 671,188 665,197 659,188" fill="#f0a050"/>
+      <text x="668" y="248" font-size="8" fill="#c8921a">M3</text>
+      <polygon points="715,213 721,222 715,231 709,222" fill="#f0a050"/>
+      <text x="718" y="248" font-size="8" fill="#c8921a">M4</text>
+    </svg>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════
+     MEILENSTEINE
+════════════════════════════════ -->
+<div class="section-block" data-section="meilensteine">
+  <div class="sec-head">
+    <span class="sec-icon">🏁</span>
+    <span>Milestones</span>
+    <div class="sec-line"></div>
+  </div>
+
+  <div class="card span-2 accent-amber" style="margin-bottom:16px">
+    <div class="card-label">Concept</div>
+    <div class="card-title"><span class="card-icon">🏁</span>Milestones</div>
+    <div class="def">Defined points in the project timeline that mark the completion of an important phase or deliverable.</div>
+    <div class="split" style="margin-bottom:12px">
+      <div class="split-col">
+        <div class="split-col-title" style="color:var(--accent)">Requirements for Milestones</div>
+        <ul class="kp">
+          <li>Clearly and unambiguously defined</li>
+          <li>Achievement must be <b>verifiable beyond doubt</b> (yes/no)</li>
+          <li>Always assigned to a work package</li>
+          <li>Basis for progress measurement &amp; controlling</li>
+        </ul>
+      </div>
+      <div class="split-col">
+        <div class="split-col-title" style="color:var(--amber)">Typical Milestones (Example)</div>
+        <ul class="kp">
+          <li>Analysis completed</li>
+          <li>Concept approved by client</li>
+          <li>Pilot successfully signed off</li>
+          <li>Project closure / go-live</li>
+        </ul>
+      </div>
+    </div>
+    <div class="note"><b>Why it matters:</b> Without clearly measurable milestones, project progress cannot be assessed objectively — steering &amp; controlling becomes unreliable.</div>
+  </div>
+
+  <div class="card span-2">
+    <div class="card-label">Exercise</div>
+    <div class="card-title"><span class="card-icon">✏️</span>Group Exercise — Example Project</div>
+    <p style="color:var(--muted2);font-size:13px;margin-bottom:12px">IT Security project: training, awareness &amp; monitoring. Deliverables per group:</p>
+    <div class="task-grid">
+      <div class="task-item"><div class="task-n">Task 1</div><div class="task-t">6–8 Work Packages</div><div class="task-d">Orientation: Analysis → Concept → Execution → Test/Pilot → Closure</div></div>
+      <div class="task-item"><div class="task-n">Task 2</div><div class="task-t">Estimate Duration</div><div class="task-d">Rough effort estimate per WP in weeks</div></div>
+      <div class="task-item"><div class="task-n">Task 3</div><div class="task-t">Dependencies</div><div class="task-d">Which WPs depend on each other? Which can run in parallel?</div></div>
+      <div class="task-item"><div class="task-n">Task 4</div><div class="task-t">Network Diagram</div><div class="task-d">Graphical representation with WP numbers</div></div>
+      <div class="task-item"><div class="task-n">Task 5</div><div class="task-t">Project Schedule</div><div class="task-d">Tabular or as a Gantt chart</div></div>
+      <div class="task-item"><div class="task-n">Task 6</div><div class="task-t">4 Milestones + critical path</div><div class="task-d">Clearly defined, assigned to a WP</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════
+     SYNTHESE (immer sichtbar)
+════════════════════════════════ -->
+<div class="section-block" data-section="synthese">
+  <div class="sec-head">
+    <span class="sec-icon">🔗</span>
+    <span>How It All Connects</span>
+    <div class="sec-line"></div>
+  </div>
+  <div class="card span-2 accent-green">
+    <div class="card-label">Synthesis</div>
+    <div class="card-title"><span class="card-icon">🔗</span>How It All Connects</div>
+    <div class="synth-row"><div class="synth-num">01</div><div class="synth-body">The <b>Stacey Matrix</b> determines upfront how structured or agile the project should be managed — directly influencing the sequence plan and effort estimation.</div></div>
+    <div class="synth-row"><div class="synth-num">02</div><div class="synth-body"><b>WBS → Sequence Plan → Effort Estimation → Project Schedule</b> is the classical planning chain: each document builds on the previous one.</div></div>
+    <div class="synth-row"><div class="synth-num">03</div><div class="synth-body">The <b>critical path</b> emerges from the project schedule and shows which WPs have zero float — that's where management effort is highest.</div></div>
+    <div class="synth-row"><div class="synth-num">04</div><div class="synth-body"><b>Milestones</b> are the measurable checkpoints in the schedule that make steering &amp; controlling possible in the first place.</div></div>
+    <div class="synth-row"><div class="synth-num">05</div><div class="synth-body">Projects with unclear requirements and an untested approach rank as <b style="color:var(--amber)">complex</b> on the Stacey Matrix → argues for an agile or hybrid approach.</div></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════
+     PRÜFUNGSVORBEREITUNG
+════════════════════════════════ -->
+<div class="section-block" data-section="pruefung">
+  <div class="sec-head">
+    <span class="sec-icon">🎯</span>
+    <span>Exam Preparation</span>
+    <div class="sec-line"></div>
+  </div>
+
+  <!-- Formeln -->
+  <div class="card span-2 accent-gold" style="margin-bottom:16px">
+    <div class="card-label">Formulas · memorise these</div>
+    <div class="card-title"><span class="card-icon">🔢</span>Network Diagram Formulas</div>
+    <div class="grid-3">
+      <div class="formula-box"><div class="formula-label">Earliest Finish</div><div class="formula-eq">EF = ES + D</div></div>
+      <div class="formula-box"><div class="formula-label">Latest Start</div><div class="formula-eq">LS = LF − D</div></div>
+      <div class="formula-box"><div class="formula-label">Total Float</div><div class="formula-eq">TF = LS − ES</div></div>
+    </div>
+    <p style="font-size:12px;color:var(--muted2);margin-top:6px">Forward pass: ES = 0 for the first WP; ES of successor = max(EF of all predecessors). Backward pass: LF of last WP = EF of project end; LF of predecessor = min(LS of all successors).</p>
+  </div>
+
+  <!-- Kernbegriffe -->
+  <div class="card span-2 accent-gold" style="margin-bottom:16px">
+    <div class="card-label">Definitions · memorise these</div>
+    <div class="card-title"><span class="card-icon">📖</span>Key Terms at a Glance</div>
+    <div class="def-cards">
+      <div class="def-card"><div class="def-card-term">Stacey Matrix</div><div class="def-card-body">Model for classifying projects by the clarity of <em>requirements</em> (What) and the familiarity of the <em>approach</em> (How) → determines the appropriate PM method.</div></div>
+      <div class="def-card"><div class="def-card-term">Sequence Plan</div><div class="def-card-body">Puts WBS elements into an actionable order. Shows dependencies: sequential vs. parallel. Foundation for the project schedule.</div></div>
+      <div class="def-card"><div class="def-card-term">Critical Path</div><div class="def-card-body">Longest sequence of dependent activities in the project. All WPs on this path have <em>TF = 0</em>. Any delay shifts the project end.</div></div>
+      <div class="def-card"><div class="def-card-term">Total Float (TF)</div><div class="def-card-body">TF = LS − ES. Indicates how many time units a WP can be delayed without endangering the project end date.</div></div>
+      <div class="def-card"><div class="def-card-term">Milestone</div><div class="def-card-body">Defined point in the project timeline marking the completion of a phase. Must be unambiguous and verifiable beyond doubt. Always assigned to a WP.</div></div>
+      <div class="def-card"><div class="def-card-term">Project Schedule</div><div class="def-card-body">Derived from time horizon, sequence plan and effort estimation. Shows concrete start and end dates. Contains <em>no</em> resource view.</div></div>
+      <div class="def-card"><div class="def-card-term">ES / EF</div><div class="def-card-body"><em>Earliest Start</em> and <em>Earliest Finish</em> — from the forward pass: EF = ES + D.</div></div>
+      <div class="def-card"><div class="def-card-term">LS / LF</div><div class="def-card-body"><em>Latest Start</em> and <em>Latest Finish</em> — from the backward pass: LS = LF − D.</div></div>
+    </div>
+  </div>
+
+  <!-- Prüfungstipps -->
+  <div class="card span-2 accent-gold" style="margin-bottom:16px">
+    <div class="card-label">Strategy</div>
+    <div class="card-title"><span class="card-icon">💡</span>Exam Tips</div>
+    <div class="tip-grid">
+      <div class="tip-item"><div class="tip-icon">🔢</div><div class="tip-title">Know your formulas cold</div><div class="tip-text">EF = ES + D, LS = LF − D, TF = LS − ES. These three formulas cover all network diagram calculations. Always state the unit (weeks).</div></div>
+      <div class="tip-item"><div class="tip-icon">🧭</div><div class="tip-title">Justify your Stacey placement</div><div class="tip-text">For Stacey Matrix questions: name both axes, state the classification AND explain why → then state which method follows from it.</div></div>
+      <div class="tip-item"><div class="tip-icon">🔴</div><div class="tip-title">Mark the critical path explicitly</div><div class="tip-text">In the network diagram, identify all WPs with TF=0 and explicitly label them as the critical path. Total duration = sum of durations on the critical path.</div></div>
+      <div class="tip-item"><div class="tip-icon">🏁</div><div class="tip-title">Milestone ≠ Task</div><div class="tip-text">"Concept created" is a task. "Concept approved by client" is a milestone — a measurable checkpoint, not an activity.</div></div>
+      <div class="tip-item"><div class="tip-icon">⛓</div><div class="tip-title">Memorise the planning chain</div><div class="tip-text">WBS → Sequence Plan → Effort Estimation → Project Schedule. Know this order and why each step depends on the previous one — it can be asked directly.</div></div>
+      <div class="tip-item"><div class="tip-icon">📊</div><div class="tip-title">Network diagram vs. Gantt</div><div class="tip-text">Network diagram = dependencies &amp; float visible. Gantt = time axis &amp; parallelism more intuitive. If asked: name both and explain the difference.</div></div>
+    </div>
+  </div>
+
+  <!-- Quiz -->
+  <div class="card span-2">
+    <div class="card-label">Practice questions · click to reveal</div>
+    <div class="card-title"><span class="card-icon">🎯</span>Possible Exam Questions</div>
+
+    <div class="quiz-item" onclick="toggleQuiz(this)">
+      <div class="quiz-q">What do the two axes of the Stacey Matrix show, and what do they determine? <span class="quiz-arrow">▶</span></div>
+      <div class="quiz-a">The X-axis shows <strong>How / Approach</strong> (known ↔ untested), the Y-axis shows <strong>What / Requirements</strong> (clear ↔ unclear). The combination determines whether a project is <em>simple, complicated, complex or chaotic</em> — and therefore which PM method (classical, agile, hybrid) is appropriate.</div>
+    </div>
+    <div class="quiz-item" onclick="toggleQuiz(this)">
+      <div class="quiz-q">What is the difference between a WBS and a sequence plan? <span class="quiz-arrow">▶</span></div>
+      <div class="quiz-a">The <strong>WBS</strong> lists <em>what</em> needs to be done (work packages, deliverables). The <strong>sequence plan</strong> puts these into an order: <em>in what sequence</em> and which WPs can run in parallel. Only from the sequence plan can a project schedule be created.</div>
+    </div>
+    <div class="quiz-item" onclick="toggleQuiz(this)">
+      <div class="quiz-q">What is the critical path and how do you identify it? <span class="quiz-arrow">▶</span></div>
+      <div class="quiz-a">The critical path is the <strong>longest chain of dependent activities</strong> — it determines the minimum project duration. It is identified via the network diagram: all WPs with <code>TF = 0</code> lie on the critical path. Any delay on this path delays the entire project.</div>
+    </div>
+    <div class="quiz-item" onclick="toggleQuiz(this)">
+      <div class="quiz-q">Explain forward pass and backward pass in a network diagram. <span class="quiz-arrow">▶</span></div>
+      <div class="quiz-a">
+        <strong>Forward pass</strong> (earliest dates): Start at the first WP with ES = 0. <code>EF = ES + D</code>. ES of successor = max(EF of all predecessors).<br><br>
+        <strong>Backward pass</strong> (latest dates): Start at the last WP: LF = EF of project end. <code>LS = LF − D</code>. LF of predecessor = min(LS of all successors).<br><br>
+        <strong>Total Float</strong>: <code>TF = LS − ES</code>.
+      </div>
+    </div>
+    <div class="quiz-item" onclick="toggleQuiz(this)">
+      <div class="quiz-q">What requirements must a milestone fulfil? <span class="quiz-arrow">▶</span></div>
+      <div class="quiz-a">A milestone must:
+        <ul>
+          <li>Be clearly and unambiguously defined</li>
+          <li>Be verifiable beyond doubt (yes/no — not "80% reached")</li>
+          <li>Be assigned to a specific work package</li>
+          <li>Serve as a basis for progress measurement and controlling</li>
+        </ul>
+      </div>
+    </div>
+    <div class="quiz-item" onclick="toggleQuiz(this)">
+      <div class="quiz-q">What does a project schedule contain — and what explicitly not? <span class="quiz-arrow">▶</span></div>
+      <div class="quiz-a">A project schedule contains: concrete <strong>start and end dates</strong> for each activity, milestones, float, and a representation of the critical path (Gantt or network diagram).<br><br>It does <strong>not</strong> contain a resource view — i.e. who does the task or with what budget. That is the job of resource planning.</div>
+    </div>
+    <div class="quiz-item" onclick="toggleQuiz(this)">
+      <div class="quiz-q">Why might a project with unclear requirements be better suited to agile PM? <span class="quiz-arrow">▶</span></div>
+      <div class="quiz-a">According to the Stacey Matrix: if requirements (What) are <em>partially unclear</em> and the approach (How) is <em>partially untested</em>, the project sits in the <strong>complex</strong> zone → agile or hybrid methods provide the flexibility needed to adjust course as the project progresses.</div>
+    </div>
+    <div class="quiz-item" onclick="toggleQuiz(this)">
+      <div class="quiz-q">What is the difference between a network diagram and a Gantt chart? <span class="quiz-arrow">▶</span></div>
+      <div class="quiz-a">
+        <strong>Network diagram</strong>: Explicitly shows dependencies between WPs, ES/EF/LS/LF/TF values and the critical path. Best for schedule calculations.<br><br>
+        <strong>Gantt chart</strong>: Shows the time axis and parallelism of WPs more intuitively, but dependencies and float values are less directly readable.<br><br>
+        Both complement each other — in practice both are often used together.
+      </div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<!-- ── FOOTER ── -->
+<footer>
+  built by <a href="https://niklas-heringer.com">niklas-heringer.com</a> ·
+  <a href="https://github.com/mev0lent/security-cheatsheets" target="_blank">view on github</a> ·
+  open source, always free
+</footer>
+
+<script>
+/* ── TAB FILTER ── */
+const pills = document.querySelectorAll('.tpill');
+const blocks = document.querySelectorAll('.section-block');
+
+pills.forEach(p => p.addEventListener('click', () => {
+  pills.forEach(x => x.classList.remove('active'));
+  p.classList.add('active');
+  const tab = p.dataset.tab;
+  blocks.forEach(b => {
+    const sec = b.dataset.section;
+    if (tab === 'alle') {
+      b.classList.remove('hidden');
+    } else if (sec === 'synthese') {
+      // synthese always shown unless pruefung-only view
+      b.classList.toggle('hidden', tab === 'pruefung');
+    } else if (sec === 'pruefung') {
+      b.classList.toggle('hidden', tab !== 'pruefung');
+    } else {
+      b.classList.toggle('hidden', sec !== tab);
+    }
+  });
+}));
+
+/* ── QUIZ ── */
+function toggleQuiz(el) { el.classList.toggle('open'); }
+</script>
+</body>
+</html>
