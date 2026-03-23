@@ -405,6 +405,16 @@
 </head>
 <body>
 
+<nav>
+  <div class="nav-inner">
+    <a class="nav-logo" href="/">learn<span>.niklas-heringer.com</span></a>
+    <div style="display:flex;gap:8px">
+      <a class="nav-back" href="/">← all sheets</a>
+      <a class="nav-back" href="https://niklas-heringer.com" target="_blank">blog ↗</a>
+    </div>
+  </div>
+</nav>
+
 <header>
   <div class="tag-line">Security Field Guide · XML Attack Surface</div>
   <h1>XML External Entity<br><span>Injection</span></h1>
@@ -435,7 +445,7 @@
     </div>
 
     <div class="prose">
-      <p><strong>XML (eXtensible Markup Language)</strong> is a text format for storing and transporting structured data. Unlike HTML, it has no predefined tags — you invent your own.</p>
+      <p><strong>XML (eXtensible Markup Language)</strong> is a text format for storing and transporting structured data. Unlike HTML, it has no predefined tag, <strong>you invent your own.</strong></p>
     </div>
 
     <div class="metaphor">
@@ -1193,5 +1203,13 @@ SAXParser parser = factory.newSAXParser();</pre>
     h.appendChild(btn);
   });
 </script>
+
+<footer style="border-top:1px solid var(--border);padding:28px 24px;text-align:center;font-family:var(--mono);font-size:12px;color:var(--muted)">
+  <a href="/" style="color:var(--muted);text-decoration:none">learn.niklas-heringer.com</a>
+  &nbsp;·&nbsp;
+  <a href="https://niklas-heringer.com" target="_blank" style="color:var(--accent);text-decoration:none">niklas-heringer.com</a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/niklas-heringer/security-cheatsheets" target="_blank" style="color:var(--muted);text-decoration:none">github ↗</a>
+</footer>
 </body>
 </html>

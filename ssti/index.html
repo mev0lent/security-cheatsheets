@@ -292,6 +292,14 @@
 </head>
 <body>
 
+<nav style="border-bottom:1px solid var(--border);background:rgba(10,12,15,0.9);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;max-width:960px;margin:0 auto;">
+  <a href="https://learn.niklas-heringer.com" style="font-family:var(--mono);font-size:12px;color:var(--accent);text-decoration:none;letter-spacing:0.08em;">learn.niklas-heringer.com</a>
+  <div style="display:flex;gap:8px;">
+    <a href="https://learn.niklas-heringer.com" style="font-family:var(--mono);font-size:11px;color:var(--muted);text-decoration:none;border:1px solid var(--border);padding:4px 12px;border-radius:2px;transition:.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">← all sheets</a>
+    <a href="https://niklas-heringer.com" target="_blank" style="font-family:var(--mono);font-size:11px;color:var(--muted);text-decoration:none;border:1px solid var(--border);padding:4px 12px;border-radius:2px;transition:.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">blog ↗</a>
+  </div>
+</nav>
+
 <header>
   <h1>SSTI Detection<br>Cheatsheet</h1>
   <p>// server-side template injection — engine fingerprinting &amp; probing</p>
@@ -480,7 +488,13 @@
   </div>
 </section>
 
-<footer>SSTI DETECTION CHEATSHEET — for authorized penetration testing only</footer>
+<footer style="margin-top:32px;padding:16px 24px;border-top:1px solid var(--border);font-family:var(--mono);font-size:0.65rem;color:var(--muted);letter-spacing:0.06em;text-align:center;">
+  <a href="https://learn.niklas-heringer.com" style="color:var(--muted);text-decoration:none;">learn.niklas-heringer.com</a>
+  &nbsp;·&nbsp;
+  <a href="https://niklas-heringer.com" target="_blank" style="color:var(--accent);text-decoration:none;">niklas-heringer.com</a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/mev0lent/security-cheatsheets" target="_blank" style="color:var(--muted);text-decoration:none;">github ↗</a>
+</footer>
 
 </body>
 </html>
