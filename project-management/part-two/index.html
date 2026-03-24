@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Management · Part 2 — learn.niklas-heringer.com</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #09100f;
+  --bg2:     #0e1a18;
+  --bg3:     #132420;
+  --border:  #1e3530;
+  --accent:  #22c997;
+  --accent2: #0ea5a0;
+  --text:    #ddeee8;
+  --muted:   #4d7a6e;
+  --muted2:  #8ab8a8;
+  --mono:    'JetBrains Mono', monospace;
+  --sans:    'Fraunces', serif;
+  --gold:    #e5c07b;
+  --amber:   #f0a050;
+  --red:     #e05555;
+  --blue:    #4a9eff;
+  --purple:  #9f7aea;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 15px; line-height: 1.65; min-height: 100vh; }
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+}
+body::after {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image: linear-gradient(rgba(34,201,151,0.018) 1px,transparent 1px), linear-gradient(90deg,rgba(34,201,151,0.018) 1px,transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* NAV */
+nav { border-bottom: 1px solid var(--border); background: rgba(9,16,15,0.92); backdrop-filter: blur(14px); position: sticky; top: 0; z-index: 100; }
+.nav-inner { display: flex; align-items: center; justify-content: space-between; padding: 11px 24px; max-width: 1100px; margin: 0 auto; }
+.nav-left  { display: flex; align-items: center; gap: 12px; }
+.nav-logo  { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--accent); text-decoration: none; letter-spacing: -0.02em; }
+.nav-logo span { color: var(--muted); font-weight: 400; }
+.nav-back  { font-family: var(--mono); font-size: 11px; color: var(--muted); text-decoration: none; border: 1px solid var(--border); padding: 5px 12px; border-radius: 6px; transition: .2s; }
+.nav-back:hover { color: var(--accent); border-color: var(--accent); }
+.nav-badge { font-family: var(--mono); font-size: 10px; padding: 3px 10px; border-radius: 20px; border: 1px solid rgba(34,201,151,.3); color: var(--accent); background: rgba(34,201,151,.07); letter-spacing: .06em; }
+
+/* HERO */
+.hero { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 60px 24px 48px; border-bottom: 1px solid var(--border); }
+.hero-eyebrow { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+.eyebrow-dot  { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: blink 2.5s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1;} 50%{opacity:.25;} }
+.eyebrow-text { font-family: var(--mono); font-size: 11px; color: var(--gold); letter-spacing: .14em; text-transform: uppercase; }
+.hero h1 { font-size: clamp(28px, 5vw, 54px); font-weight: 600; line-height: 1.1; letter-spacing: -.02em; margin-bottom: 18px; }
+.hero h1 .dim { color: var(--muted); font-weight: 300; }
+.hero h1 .hl  { color: var(--accent); }
+.hero-sub { font-size: 15px; color: var(--muted2); max-width: 580px; margin-bottom: 28px; font-weight: 300; line-height: 1.75; }
+.hero-sub strong { color: var(--gold); font-weight: 600; }
+.hero-meta { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; }
+.meta-pill { font-family: var(--mono); font-size: 11px; color: var(--muted2); display: flex; align-items: center; gap: 6px; }
+.meta-pill::before { content: '·'; color: var(--muted); }
+.meta-pill:first-child::before { display: none; }
+.topic-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+.tpill { font-family: var(--mono); font-size: 10px; padding: 4px 12px; border-radius: 20px; border: 1px solid; letter-spacing: .05em; cursor: pointer; transition: all .2s; user-select: none; }
+.tpill[data-tab="alle"]         { border-color: rgba(34,201,151,.3);  color: var(--accent);  background: rgba(34,201,151,.06); }
+.tpill[data-tab="roles"]        { border-color: rgba(74,158,255,.3);  color: var(--blue);    background: rgba(74,158,255,.06); }
+.tpill[data-tab="artifacts"]    { border-color: rgba(159,122,234,.3); color: var(--purple);  background: rgba(159,122,234,.06); }
+.tpill[data-tab="events"]       { border-color: rgba(224,85,85,.3);   color: var(--red);     background: rgba(224,85,85,.06); }
+.tpill[data-tab="stories"]      { border-color: rgba(240,160,80,.3);  color: var(--amber);   background: rgba(240,160,80,.06); }
+.tpill[data-tab="estimation"]   { border-color: rgba(74,158,255,.3);  color: #60c8ff;        background: rgba(74,158,255,.06); }
+.tpill[data-tab="pruefung"]     { border-color: rgba(229,192,123,.3); color: var(--gold);    background: rgba(229,192,123,.06); }
+.tpill.active { opacity: 1; }
+.tpill[data-tab="alle"].active       { background: var(--accent);  color: #09100f; border-color: var(--accent); }
+.tpill[data-tab="roles"].active      { background: var(--blue);    color: #fff;    border-color: var(--blue); }
+.tpill[data-tab="artifacts"].active  { background: var(--purple);  color: #fff;    border-color: var(--purple); }
+.tpill[data-tab="events"].active     { background: var(--red);     color: #fff;    border-color: var(--red); }
+.tpill[data-tab="stories"].active    { background: var(--amber);   color: #09100f; border-color: var(--amber); }
+.tpill[data-tab="estimation"].active { background: #60c8ff;        color: #09100f; border-color: #60c8ff; }
+.tpill[data-tab="pruefung"].active   { background: var(--gold);    color: #09100f; border-color: var(--gold); }
+
+/* MAIN */
+.main { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 48px 24px 64px; }
+
+/* SECTION HEADER */
+.sec-head { display: flex; align-items: center; gap: 14px; margin: 48px 0 20px; font-family: var(--mono); font-size: 11px; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); }
+.sec-head:first-child { margin-top: 0; }
+.sec-line { flex: 1; height: 1px; background: var(--border); }
+.sec-icon { font-size: 16px; }
+
+/* GRID */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+.span-2 { grid-column: 1/-1; }
+@media (max-width: 700px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } .span-2 { grid-column: 1; } }
+
+/* CARDS */
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; position: relative; overflow: hidden; transition: border-color .2s; }
+.card:hover { border-color: rgba(34,201,151,.25); }
+.card::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(135deg, rgba(34,201,151,.03) 0%, transparent 60%); }
+.card-label { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.card-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.card-icon  { width: 26px; height: 26px; background: var(--bg3); border: 1px solid var(--border); border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+.card.accent-green  { border-left: 3px solid var(--accent); }
+.card.accent-blue   { border-left: 3px solid var(--blue); }
+.card.accent-purple { border-left: 3px solid var(--purple); }
+.card.accent-red    { border-left: 3px solid var(--red); }
+.card.accent-amber  { border-left: 3px solid var(--amber); }
+.card.accent-gold   { border-left: 3px solid var(--gold); }
+.card.accent-cyan   { border-left: 3px solid #60c8ff; }
+
+/* DEF */
+.def { background: var(--bg3); border-left: 3px solid var(--purple); border-radius: 0 8px 8px 0; padding: 10px 14px; font-size: 13px; color: var(--muted2); font-style: italic; margin-bottom: 14px; line-height: 1.6; }
+
+/* LIST */
+ul.kp { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+ul.kp li { font-size: 13px; color: var(--muted2); display: flex; gap: 8px; align-items: flex-start; line-height: 1.5; }
+ul.kp li::before { content: '▸'; color: var(--accent); font-size: 10px; margin-top: 3px; flex-shrink: 0; }
+ul.kp li b { color: var(--text); }
+
+/* NOTE */
+.note { background: linear-gradient(135deg,#0e1e2a,#0e1a22); border: 1px solid #1e3a50; border-radius: 9px; padding: 12px 14px; margin-top: 14px; font-size: 12px; color: #7aa8c8; line-height: 1.65; }
+.note b { color: #a8d0f0; }
+
+/* SPLIT */
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.split-col { background: var(--bg3); border-radius: 9px; padding: 12px 14px; border: 1px solid var(--border); }
+.split-col-title { font-weight: 600; font-size: 12px; margin-bottom: 10px; padding-bottom: 7px; border-bottom: 1px solid var(--border); }
+@media (max-width: 580px) { .split { grid-template-columns: 1fr; } }
+
+/* ROLE CARDS */
+.role-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+.role-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 20px 20px; }
+.role-card:hover { border-color: rgba(34,201,151,.25); }
+.role-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.role-alias { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-bottom: 12px; letter-spacing: .06em; }
+@media (max-width: 680px) { .role-grid { grid-template-columns: 1fr; } }
+
+/* SCRUM FLOW SVG */
+.svg-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 9px; margin-top: 14px; }
+
+/* EVENT TABLE */
+.event-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 2px; }
+.event-table th { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+.event-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--muted2); vertical-align: top; line-height: 1.5; }
+.event-table tr:last-child td { border-bottom: none; }
+.event-table td:first-child { color: var(--text); font-weight: 600; white-space: nowrap; }
+.event-table td b { color: var(--text); }
+.event-highlight { color: var(--accent) !important; }
+
+/* POKER CARDS */
+.poker-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.poker-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; width: 48px; height: 64px; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--text); transition: border-color .2s, transform .15s; cursor: default; flex-shrink: 0; }
+.poker-card:hover { border-color: var(--accent); transform: translateY(-3px); }
+.poker-card.special { color: var(--muted2); font-size: 18px; }
+
+/* USER STORY BOX */
+.story-box { background: var(--bg3); border: 1px solid var(--border); border-radius: 9px; padding: 14px 16px; margin-bottom: 10px; }
+.story-formula { font-family: var(--mono); font-size: 12px; color: var(--accent); margin-bottom: 8px; }
+.story-example { font-size: 13px; color: var(--muted2); line-height: 1.6; font-style: italic; }
+.story-example b { color: var(--text); font-style: normal; }
+.story-ac { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+.story-ac b { color: var(--amber); }
+
+/* HIERARCHY */
+.hier-stack { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.hier-item { border-radius: 8px; padding: 10px 16px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+.hier-sub  { font-size: 11px; color: var(--muted2); font-weight: 400; margin-left: auto; font-family: var(--mono); }
+
+/* INVEST */
+.invest-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+.invest-item { background: var(--bg3); border-radius: 8px; padding: 10px 12px; border: 1px solid var(--border); }
+.invest-letter { font-family: var(--mono); font-size: 18px; font-weight: 700; color: var(--accent); margin-bottom: 3px; }
+.invest-word { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.invest-desc { font-size: 11px; color: var(--muted2); line-height: 1.4; }
+@media (max-width: 580px) { .invest-grid { grid-template-columns: 1fr 1fr; } }
+
+/* DEF CARDS */
+.def-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.def-card  { background: var(--bg3); border-radius: 9px; padding: 13px 14px; border: 1px solid var(--border); }
+.def-card-term { font-weight: 700; font-size: 12px; color: var(--accent); margin-bottom: 6px; }
+.def-card-body { font-size: 11px; color: var(--muted2); line-height: 1.55; }
+@media (max-width: 580px) { .def-cards { grid-template-columns: 1fr; } }
+
+/* QUIZ */
+.quiz-item { background: var(--bg3); border-radius: 9px; border: 1px solid var(--border); margin-bottom: 8px; overflow: hidden; }
+.quiz-q    { padding: 12px 16px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 10px; user-select: none; transition: background .15s; }
+.quiz-q:hover { background: var(--border); }
+.quiz-arrow { font-size: 11px; color: var(--muted); transition: transform .2s; flex-shrink: 0; }
+.quiz-item.open .quiz-arrow { transform: rotate(90deg); }
+.quiz-a    { display: none; padding: 12px 16px; font-size: 13px; color: var(--muted2); border-top: 1px solid var(--border); background: #0c1512; line-height: 1.7; }
+.quiz-item.open .quiz-a { display: block; }
+.quiz-a ul { list-style: disc; padding-left: 18px; margin-top: 6px; }
+.quiz-a ul li { margin-bottom: 4px; font-size: 12px; }
+.quiz-a code { background: #0e1e30; border-radius: 4px; padding: 1px 6px; font-family: var(--mono); font-size: 11px; color: #80b8ff; }
+.quiz-a strong { color: var(--text); }
+
+/* TIP GRID */
+.tip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tip-item { background: var(--bg3); border-radius: 9px; padding: 13px 14px; border: 1px solid var(--border); }
+.tip-icon  { font-size: 17px; margin-bottom: 5px; }
+.tip-title { font-weight: 600; font-size: 12px; margin-bottom: 6px; color: var(--amber); }
+.tip-text  { font-size: 11px; color: var(--muted2); line-height: 1.6; }
+@media (max-width: 580px) { .tip-grid { grid-template-columns: 1fr; } }
+
+/* SYNTH */
+.synth-row { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.synth-row:last-child { border-bottom: none; }
+.synth-num  { font-family: var(--mono); font-size: 12px; color: var(--accent); font-weight: 700; flex-shrink: 0; width: 24px; }
+.synth-body { font-size: 13px; color: var(--muted2); line-height: 1.6; }
+.synth-body b { color: var(--text); }
+
+/* HIDDEN */
+.section-block.hidden { display: none; }
+
+/* FOOTER */
+footer { position: relative; z-index: 1; border-top: 1px solid var(--border); padding: 24px; text-align: center; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+footer a { color: var(--muted2); text-decoration: none; transition: color .2s; }
+footer a:hover { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <div class="nav-left">
+      <a class="nav-logo" href="https://learn.niklas-heringer.com">learn<span>.niklas-heringer.com</span></a>
+      <span class="nav-badge">project management</span>
+    </div>
+    <a class="nav-back" href="https://learn.niklas-heringer.com">← index</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">
+    <span class="eyebrow-dot"></span>
+    <span class="eyebrow-text">Project Management · Agile</span>
+  </div>
+  <h1>Project Management<br><span class="dim">— </span><span class="hl">Part 2</span></h1>
+  <p class="hero-sub">
+    Agile project management with <strong>Scrum</strong>. Covers roles, artifacts, events, user stories,
+    acceptance criteria, <strong>Planning Poker</strong> and story point estimation.
+  </p>
+  <div class="hero-meta">
+    <span class="meta-pill">6 Topics</span>
+    <span class="meta-pill">3 Roles · 3 Artifacts · 5 Events</span>
+    <span class="meta-pill">10 Quiz Questions</span>
+  </div>
+  <div class="topic-pills">
+    <span class="tpill active" data-tab="alle">All</span>
+    <span class="tpill" data-tab="roles">👤 Roles</span>
+    <span class="tpill" data-tab="artifacts">📦 Artifacts</span>
+    <span class="tpill" data-tab="events">🔁 Events</span>
+    <span class="tpill" data-tab="stories">📝 User Stories</span>
+    <span class="tpill" data-tab="estimation">🃏 Estimation</span>
+    <span class="tpill" data-tab="pruefung">🎯 Exam Prep</span>
+  </div>
+</div>
+
+<main class="main">
+
+<!-- ══════════════════════════════════════
+     OVERVIEW — Scrum Flow
+══════════════════════════════════════ -->
+<div class="section-block" data-section="roles">
+  <div class="sec-head"><span class="sec-icon">🔄</span><span>Scrum at a Glance</span><div class="sec-line"></div></div>
+
+  <div class="card span-2 accent-green" style="margin-bottom:16px">
+    <div class="card-label">Framework Overview</div>
+    <div class="card-title"><span class="card-icon">🔄</span>The Scrum Framework</div>
+    <p style="color:var(--muted2);font-size:13px;margin-bottom:14px">
+      Scrum is built on <b style="color:var(--text)">empirical process control</b> — three pillars: <b style="color:var(--accent)">Transparency</b>, <b style="color:var(--accent)">Inspection</b>, and <b style="color:var(--accent)">Adaptation</b>. It organises work into fixed-length iterations called <b style="color:var(--text)">Sprints</b> (max. 4 weeks), each delivering a potentially shippable increment.
+    </p>
+
+    <!-- Scrum Flow SVG -->
+    <div class="svg-scroll">
+    <svg viewBox="0 0 820 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;min-width:620px;display:block;border-radius:8px;background:#070d0c" font-family="JetBrains Mono,monospace">
+
+      <!-- Product Backlog -->
+      <rect x="10" y="30" width="130" height="100" rx="7" fill="#112040" stroke="#2a4a80" stroke-width="1.2"/>
+      <text x="75" y="52" text-anchor="middle" font-size="10" font-weight="700" fill="#7ab0ff">Product</text>
+      <text x="75" y="64" text-anchor="middle" font-size="10" font-weight="700" fill="#7ab0ff">Backlog</text>
+      <rect x="22" y="73" width="106" height="8" rx="2" fill="#1e3060" stroke="#3050a0" stroke-width="0.6"/>
+      <rect x="22" y="85" width="106" height="8" rx="2" fill="#1e3060" stroke="#3050a0" stroke-width="0.6"/>
+      <rect x="22" y="97" width="106" height="8" rx="2" fill="#1e3060" stroke="#3050a0" stroke-width="0.6"/>
+      <rect x="22" y="109" width="106" height="8" rx="2" fill="#1e3060" stroke="#3050a0" stroke-width="0.6"/>
+      <text x="75" y="124" text-anchor="middle" font-size="8" fill="#4d7a6e">ordered by value</text>
+
+      <!-- arrow -->
+      <line x1="140" y1="80" x2="166" y2="80" stroke="#22c997" stroke-width="1.5" marker-end="url(#arr-g)"/>
+
+      <!-- Sprint Planning -->
+      <rect x="168" y="50" width="100" height="60" rx="7" fill="#1a2040" stroke="#22c997" stroke-width="1.2"/>
+      <text x="218" y="76" text-anchor="middle" font-size="10" font-weight="700" fill="#22c997">Sprint</text>
+      <text x="218" y="89" text-anchor="middle" font-size="10" font-weight="700" fill="#22c997">Planning</text>
+      <text x="218" y="103" text-anchor="middle" font-size="8" fill="#4d7a6e">max. 8h/month</text>
+
+      <!-- arrow -->
+      <line x1="268" y1="80" x2="292" y2="80" stroke="#22c997" stroke-width="1.5" marker-end="url(#arr-g)"/>
+
+      <!-- Sprint box -->
+      <rect x="294" y="20" width="230" height="120" rx="9" fill="#0d1a10" stroke="#22c997" stroke-width="1.5" stroke-dasharray="5,3"/>
+      <text x="409" y="38" text-anchor="middle" font-size="9" fill="#22c997" letter-spacing="2">SPRINT  ≤ 4 WEEKS</text>
+
+      <!-- Sprint Backlog inside -->
+      <rect x="306" y="44" width="90" height="52" rx="5" fill="#112040" stroke="#2a4a80" stroke-width="1"/>
+      <text x="351" y="63" text-anchor="middle" font-size="9" font-weight="700" fill="#7ab0ff">Sprint</text>
+      <text x="351" y="74" text-anchor="middle" font-size="9" font-weight="700" fill="#7ab0ff">Backlog</text>
+      <rect x="312" y="80" width="78" height="6" rx="2" fill="#1e3060"/>
+      <rect x="312" y="89" width="60" height="6" rx="2" fill="#1e3060"/>
+
+      <!-- Scrum Team circle -->
+      <circle cx="440" cy="83" r="32" fill="#0e2a20" stroke="#22c997" stroke-width="1.2"/>
+      <text x="440" y="79" text-anchor="middle" font-size="8" fill="#22c997">Dev</text>
+      <text x="440" y="91" text-anchor="middle" font-size="8" fill="#4a9eff">SM</text>
+      <text x="440" y="103" text-anchor="middle" font-size="8" fill="#f0a050">PO</text>
+
+      <!-- Daily Scrum bubble -->
+      <ellipse cx="440" cy="44" rx="28" ry="14" fill="#0e2030" stroke="#4a9eff" stroke-width="1"/>
+      <text x="440" y="41" text-anchor="middle" font-size="8" fill="#4a9eff">Daily</text>
+      <text x="440" y="52" text-anchor="middle" font-size="8" fill="#4a9eff">Scrum</text>
+      <line x1="440" y1="58" x2="440" y2="52" stroke="#4a9eff" stroke-width="0.8" stroke-dasharray="2,2"/>
+
+      <!-- arrow out of sprint -->
+      <line x1="524" y1="80" x2="550" y2="80" stroke="#22c997" stroke-width="1.5" marker-end="url(#arr-g)"/>
+
+      <!-- Increment -->
+      <rect x="552" y="50" width="90" height="60" rx="7" fill="#1a2040" stroke="#9f7aea" stroke-width="1.2"/>
+      <text x="597" y="74" text-anchor="middle" font-size="10" font-weight="700" fill="#9f7aea">Increment</text>
+      <text x="597" y="87" text-anchor="middle" font-size="8" fill="#4d7a6e">Definition</text>
+      <text x="597" y="97" text-anchor="middle" font-size="8" fill="#4d7a6e">of Done ✓</text>
+      <text x="597" y="107" text-anchor="middle" font-size="8" fill="#4d7a6e">usable result</text>
+
+      <!-- arrow to Sprint Review -->
+      <line x1="642" y1="80" x2="666" y2="80" stroke="#22c997" stroke-width="1.5" marker-end="url(#arr-g)"/>
+
+      <!-- Sprint Review -->
+      <rect x="668" y="50" width="100" height="60" rx="7" fill="#1a2040" stroke="#f0a050" stroke-width="1.2"/>
+      <text x="718" y="74" text-anchor="middle" font-size="10" font-weight="700" fill="#f0a050">Sprint</text>
+      <text x="718" y="87" text-anchor="middle" font-size="10" font-weight="700" fill="#f0a050">Review</text>
+      <text x="718" y="101" text-anchor="middle" font-size="8" fill="#4d7a6e">max. 4h/month</text>
+
+      <!-- Sprint Retrospective top arc -->
+      <path d="M768,80 Q800,15 295,15 Q270,15 268,50" fill="none" stroke="#e05555" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arr-r)"/>
+      <text x="530" y="12" text-anchor="middle" font-size="8" fill="#e05555">Sprint Retrospective  (max. 3h/month)</text>
+
+      <defs>
+        <marker id="arr-g" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><polygon points="0,1 7,4 0,7" fill="#22c997"/></marker>
+        <marker id="arr-r" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><polygon points="0,1 7,4 0,7" fill="#e05555"/></marker>
+      </defs>
+    </svg>
+    </div>
+
+    <div class="note" style="margin-top:14px"><b>3 Pillars:</b> <b style="color:#a8d0f0">Transparency</b> — everyone shares the same understanding of work and standards. <b style="color:#a8d0f0">Inspection</b> — frequent checks of progress toward the goal. <b style="color:#a8d0f0">Adaptation</b> — adjusting the process when deviations are found. These underpin all Scrum events and artifacts.</div>
+  </div>
+
+<!-- ══════════════════════════════════════
+     ROLES
+══════════════════════════════════════ -->
+  <div class="sec-head" style="margin-top:0"><span class="sec-icon">👤</span><span>Roles &amp; Accountabilities</span><div class="sec-line"></div></div>
+
+  <div class="role-grid">
+    <div class="role-card" style="border-left:3px solid var(--blue)">
+      <div class="role-name" style="color:var(--blue)">Product Owner</div>
+      <div class="role-alias">"customer representative"</div>
+      <ul class="kp">
+        <li>Develops and communicates the <b>product goal</b></li>
+        <li>Owns and prioritises the <b>Product Backlog</b></li>
+        <li>Determines release dates and content</li>
+        <li>Accepts or rejects completed work</li>
+      </ul>
+    </div>
+    <div class="role-card" style="border-left:3px solid var(--accent)">
+      <div class="role-name" style="color:var(--accent)">Scrum Master</div>
+      <div class="role-alias">"servant leader"</div>
+      <ul class="kp">
+        <li>Ensures the Scrum process is followed</li>
+        <li>Removes <b>impediments</b> for the team</li>
+        <li>Facilitates Scrum events (time-boxing)</li>
+        <li>Keeps Scrum artifacts up to date</li>
+      </ul>
+    </div>
+    <div class="role-card" style="border-left:3px solid var(--amber)">
+      <div class="role-name" style="color:var(--amber)">Developer</div>
+      <div class="role-alias">"not necessarily a software dev"</div>
+      <ul class="kp">
+        <li>Responsible for <b>Sprint Backlog</b> items</li>
+        <li>Ensures quality — upholds <b>Definition of Done</b></li>
+        <li>Keeps the <b>Sprint Goal</b> in focus</li>
+        <li>Self-organising, cross-functional</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card span-2 accent-blue">
+    <div class="card-label">The Scrum Team</div>
+    <div class="card-title"><span class="card-icon">👥</span>Team Structure</div>
+    <div class="split">
+      <div class="split-col">
+        <div class="split-col-title" style="color:var(--accent)">Characteristics</div>
+        <ul class="kp">
+          <li>Usually <b>max. 10 members</b></li>
+          <li>No sub-teams — clear roles only</li>
+          <li><b>Self-organising</b> — decides how to do the work</li>
+          <li><b>Cross-functional</b> — all skills needed are present</li>
+        </ul>
+      </div>
+      <div class="split-col">
+        <div class="split-col-title" style="color:var(--blue)">Accountability summary</div>
+        <ul class="kp">
+          <li><b>PO</b> → maximises product value</li>
+          <li><b>SM</b> → maximises team effectiveness</li>
+          <li><b>Developers</b> → deliver the Increment</li>
+          <li>All share responsibility for Scrum process</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     ARTIFACTS
+══════════════════════════════════════ -->
+<div class="section-block" data-section="artifacts">
+  <div class="sec-head"><span class="sec-icon">📦</span><span>Artifacts</span><div class="sec-line"></div></div>
+
+  <div class="grid-3" style="margin-bottom:16px">
+    <div class="card accent-blue">
+      <div class="card-label">Artifact 1</div>
+      <div class="card-title"><span class="card-icon">📋</span>Product Backlog</div>
+      <div class="def">The single, ordered list of everything needed in the product.</div>
+      <ul class="kp">
+        <li><b>Single</b> — one backlog per product</li>
+        <li><b>Transparent</b> — visible to all</li>
+        <li><b>Current</b> — continuously refined</li>
+        <li><b>Ordered</b> — PO orders by value</li>
+        <li>Contains the <b>Product Goal</b> and all <b>Product Backlog Items</b></li>
+      </ul>
+    </div>
+    <div class="card accent-red">
+      <div class="card-label">Artifact 2</div>
+      <div class="card-title"><span class="card-icon">🗂</span>Sprint Backlog</div>
+      <div class="def">The work selected for the current Sprint plus the plan to deliver it.</div>
+      <ul class="kp">
+        <li>Contains the <b>Sprint Goal</b></li>
+        <li>Selected items from the Product Backlog</li>
+        <li>Execution plan for Developers</li>
+        <li>Large items broken into smaller <b>tasks</b></li>
+        <li>Visualised on a <b>task board</b>: open / in progress / done</li>
+      </ul>
+    </div>
+    <div class="card accent-purple">
+      <div class="card-label">Artifact 3</div>
+      <div class="card-title"><span class="card-icon">📦</span>Increment</div>
+      <div class="def">A concrete, usable step toward the Product Goal — delivered every Sprint.</div>
+      <ul class="kp">
+        <li>One or more increments per Sprint</li>
+        <li>Must meet <b>Definition of Done</b></li>
+        <li>Usable regardless of whether the PO releases it</li>
+        <li>Each increment builds on all prior ones</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card span-2 accent-green">
+    <div class="card-label">Concept</div>
+    <div class="card-title"><span class="card-icon">✅</span>Definition of Done (DoD)</div>
+    <p style="color:var(--muted2);font-size:13px;margin-bottom:12px">A shared understanding of what "complete" means for any Increment. Creates transparency and ensures consistent quality across the team.</p>
+    <div class="split">
+      <div class="split-col">
+        <div class="split-col-title" style="color:var(--accent)">Key rules</div>
+        <ul class="kp">
+          <li>If an item doesn't meet DoD → back to Product Backlog</li>
+          <li>Cannot be presented at Sprint Review without meeting DoD</li>
+          <li>Developers are required to conform to it</li>
+        </ul>
+      </div>
+      <div class="split-col">
+        <div class="split-col-title" style="color:var(--blue)">Org vs. team scope</div>
+        <ul class="kp">
+          <li>If org-wide standard exists → all teams must follow it as minimum</li>
+          <li>If no standard → Scrum Team creates their own DoD</li>
+          <li>Multiple teams on same product → must share one DoD</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Product Backlog hierarchy -->
+  <div class="card span-2 accent-blue">
+    <div class="card-label">Product Backlog · Structure</div>
+    <div class="card-title"><span class="card-icon">🏗</span>Requirement Hierarchy</div>
+    <p style="color:var(--muted2);font-size:13px;margin-bottom:4px">Backlog items are structured from broad themes down to concrete, testable stories.</p>
+    <div class="hier-stack">
+      <div class="hier-item" style="background:#0e1a30;border:1px solid #2a4070">
+        <span style="font-family:var(--mono);font-size:11px;color:#4a6080">01</span>
+        <span style="color:#7ab0ff">Theme</span>
+        <span class="hier-sub">broad strategic area</span>
+      </div>
+      <div style="text-align:center;font-size:12px;color:var(--muted)">↓</div>
+      <div class="hier-item" style="background:#0e1e20;border:1px solid #1e4035">
+        <span style="font-family:var(--mono);font-size:11px;color:#2a5040">02</span>
+        <span style="color:#22c997">Feature</span>
+        <span class="hier-sub">concrete functionality</span>
+      </div>
+      <div style="text-align:center;font-size:12px;color:var(--muted)">↓</div>
+      <div class="hier-item" style="background:#1e1a30;border:1px solid #3a2a60">
+        <span style="font-family:var(--mono);font-size:11px;color:#4a3a70">03</span>
+        <span style="color:#9f7aea">User Story</span>
+        <span class="hier-sub">specific value for a user group</span>
+      </div>
+      <div style="text-align:center;font-size:12px;color:var(--muted)">↓</div>
+      <div class="hier-item" style="background:#201a14;border:1px solid #503020">
+        <span style="font-family:var(--mono);font-size:11px;color:#503020">04</span>
+        <span style="color:#f0a050">Task</span>
+        <span class="hier-sub">implementation sub-step (in Sprint Backlog)</span>
+      </div>
+    </div>
+    <div class="note"><b>Product Backlog Refinement:</b> A continuous process — not a formal Sprint event. Owned by the Product Owner. Involves adding new requirements, breaking items down, and re-estimating effort.</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     EVENTS
+══════════════════════════════════════ -->
+<div class="section-block" data-section="events">
+  <div class="sec-head"><span class="sec-icon">🔁</span><span>Events</span><div class="sec-line"></div></div>
+
+  <div class="card span-2 accent-red" style="margin-bottom:16px">
+    <div class="card-label">The Sprint</div>
+    <div class="card-title"><span class="card-icon">❤️</span>Sprint — Heart of Scrum</div>
+    <div class="def">A fixed-length iteration (max. 4 weeks) in which a usable Increment is created. Sprints follow immediately after one another — no gaps.</div>
+    <div class="split">
+      <div class="split-col">
+        <div class="split-col-title" style="color:var(--red)">Rules</div>
+        <ul class="kp">
+          <li>Requirements are <b>fixed</b> during a Sprint</li>
+          <li>No breaks between Sprints</li>
+          <li>Max. 4 weeks; shorter is often better</li>
+          <li>Contains all 4 recurring meetings</li>
+        </ul>
+      </div>
+      <div class="split-col">
+        <div class="split-col-title" style="color:var(--amber)">Time-boxing</div>
+        <ul class="kp">
+          <li>Key tool for discipline and focus</li>
+          <li>Scrum Master is responsible for enforcement</li>
+          <li>Limits scale with Sprint duration (shown below)</li>
+          <li>Prevents scope creep within the event</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="card span-2 accent-red">
+    <div class="card-label">All 5 Events</div>
+    <div class="card-title"><span class="card-icon">📅</span>Event Reference</div>
+    <table class="event-table">
+      <thead>
+        <tr>
+          <th>Event</th>
+          <th>Participants</th>
+          <th>Time-box (1-month Sprint)</th>
+          <th>Purpose</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Sprint</td>
+          <td>Entire Scrum Team</td>
+          <td class="event-highlight">≤ 4 weeks</td>
+          <td>Container for all other events; produces an Increment</td>
+        </tr>
+        <tr>
+          <td>Sprint Planning</td>
+          <td>Dev + PO + SM</td>
+          <td class="event-highlight">max. 8 h</td>
+          <td>Select Product Backlog Items → Sprint Backlog; set Sprint Goal; plan execution</td>
+        </tr>
+        <tr>
+          <td>Daily Scrum</td>
+          <td>Dev + SM</td>
+          <td class="event-highlight">max. 15 min</td>
+          <td>Sync on progress since last Daily, plan until next, surface impediments</td>
+        </tr>
+        <tr>
+          <td>Sprint Review</td>
+          <td>Scrum Team + stakeholders</td>
+          <td class="event-highlight">max. 4 h</td>
+          <td>Demo Increment to PO &amp; client; discuss and adapt Product Backlog</td>
+        </tr>
+        <tr>
+          <td>Sprint Retrospective</td>
+          <td>Team + SM</td>
+          <td class="event-highlight">max. 3 h</td>
+          <td>Inspect team process; identify improvements; commit to changes next Sprint</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     USER STORIES
+══════════════════════════════════════ -->
+<div class="section-block" data-section="stories">
+  <div class="sec-head"><span class="sec-icon">📝</span><span>User Stories &amp; Acceptance Criteria</span><div class="sec-line"></div></div>
+
+  <div class="card span-2 accent-amber" style="margin-bottom:16px">
+    <div class="card-label">Format</div>
+    <div class="card-title"><span class="card-icon">📝</span>User Story Formula</div>
+    <div class="story-box">
+      <div class="story-formula">As [who] I want [what] so that [why / benefit].</div>
+    </div>
+    <p style="font-size:12px;color:var(--muted2);margin-bottom:12px">Each story must specify a distinct <b style="color:var(--text)">target group</b> ("who"), a concrete <b style="color:var(--text)">functionality</b> ("what"), and the <b style="color:var(--text)">value</b> delivered ("why"). Examples:</p>
+    <div class="story-box">
+      <div class="story-example"><b>As</b> a busy professional, <b>I want</b> a large selection of different workout durations, <b>so that</b> I can fit exercise into my daily schedule.</div>
+      <div class="story-ac"><b>Acceptance criterion:</b> Filter for at least 3 different workout durations with videos displayed per selection.</div>
+    </div>
+    <div class="story-box">
+      <div class="story-example"><b>As</b> a student, <b>I want</b> as many bodyweight exercises as possible, <b>so that</b> I don't need to buy expensive equipment.</div>
+      <div class="story-ac"><b>Acceptance criterion:</b> At least 50% of workouts require no equipment; tagged "no equipment" in filters.</div>
+    </div>
+    <div class="story-box">
+      <div class="story-example"><b>As</b> a beginner, <b>I want</b> short videos with easy exercises, <b>so that</b> I have a gentle entry point into fitness.</div>
+      <div class="story-ac"><b>Acceptance criterion:</b> Videos max. 5 min, labelled "beginner-friendly", with clear on-screen instructions.</div>
+    </div>
+  </div>
+
+  <div class="card span-2 accent-amber" style="margin-bottom:16px">
+    <div class="card-label">Concept</div>
+    <div class="card-title"><span class="card-icon">✅</span>Acceptance Criteria</div>
+    <div class="def">Conditions that must be met for a User Story to be considered correctly and completely implemented.</div>
+    <div class="split">
+      <div class="split-col">
+        <div class="split-col-title" style="color:var(--accent)">Purpose</div>
+        <ul class="kp">
+          <li>Makes the <b>Definition of Done</b> concrete per story</li>
+          <li>Enables objective testing of completion</li>
+          <li>Agreed between PO and Developers during refinement</li>
+          <li>Drives the Sprint Review demo</li>
+        </ul>
+      </div>
+      <div class="split-col">
+        <div class="split-col-title" style="color:var(--amber)">Good criteria are…</div>
+        <ul class="kp">
+          <li><b>Testable</b> — yes or no, not "mostly"</li>
+          <li><b>Specific</b> — concrete numbers or behaviours</li>
+          <li><b>Agreed</b> — not imposed unilaterally</li>
+          <li><b>Minimal</b> — only what's needed, not a full spec</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- INVEST -->
+  <div class="card span-2 accent-amber">
+    <div class="card-label">Quality checklist</div>
+    <div class="card-title"><span class="card-icon">🧪</span>INVEST — Guidelines for Good User Stories</div>
+    <div class="invest-grid">
+      <div class="invest-item"><div class="invest-letter">I</div><div class="invest-word">Independent</div><div class="invest-desc">Can be developed and delivered without depending on another story</div></div>
+      <div class="invest-item"><div class="invest-letter">N</div><div class="invest-word">Negotiable</div><div class="invest-desc">Not a contract — details can be discussed and adjusted</div></div>
+      <div class="invest-item"><div class="invest-letter">V</div><div class="invest-word">Valuable</div><div class="invest-desc">Delivers clear value to a specific user or the business</div></div>
+      <div class="invest-item"><div class="invest-letter">E</div><div class="invest-word">Estimatable</div><div class="invest-desc">Team can estimate the effort required</div></div>
+      <div class="invest-item"><div class="invest-letter">S</div><div class="invest-word">Small</div><div class="invest-desc">Fits within a single Sprint — split if too large</div></div>
+      <div class="invest-item"><div class="invest-letter">T</div><div class="invest-word">Testable</div><div class="invest-desc">Acceptance criteria exist to verify it's done</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     ESTIMATION
+══════════════════════════════════════ -->
+<div class="section-block" data-section="estimation">
+  <div class="sec-head"><span class="sec-icon">🃏</span><span>Estimation — Story Points &amp; Planning Poker</span><div class="sec-line"></div></div>
+
+  <div class="grid-2" style="margin-bottom:16px">
+    <div class="card accent-cyan">
+      <div class="card-label">Concept</div>
+      <div class="card-title"><span class="card-icon">📊</span>Story Points</div>
+      <div class="def">Relative measure of effort, complexity and uncertainty — not time.</div>
+      <ul class="kp">
+        <li>Compare backlog items <b>relative to each other</b></li>
+        <li>Not an absolute unit (not hours or days)</li>
+        <li><b>Velocity</b> = story points completed per Sprint</li>
+        <li>Enables <b>burn-down charts</b> to visualise progress</li>
+        <li>Teams calibrate around a shared <b>reference story</b></li>
+      </ul>
+    </div>
+    <div class="card accent-cyan">
+      <div class="card-label">Concept</div>
+      <div class="card-title"><span class="card-icon">📉</span>Velocity &amp; Burn-Down</div>
+      <ul class="kp">
+        <li><b>Velocity</b>: stabilises after a few Sprints — use for forecasting</li>
+        <li><b>Burn-down chart</b>: remaining story points over time</li>
+        <li>Ideal line vs. actual — shows if team is on track</li>
+        <li>Velocity is team-specific — don't compare across teams</li>
+        <li>Improves predictability over time</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card span-2 accent-cyan">
+    <div class="card-label">Technique</div>
+    <div class="card-title"><span class="card-icon">🃏</span>Planning Poker</div>
+    <p style="color:var(--muted2);font-size:13px;margin-bottom:14px">A consensus-based estimation technique. Each team member independently estimates, then all reveal simultaneously — divergence triggers discussion.</p>
+    <div class="split" style="margin-bottom:14px">
+      <div class="split-col">
+        <div class="split-col-title" style="color:#60c8ff">Process</div>
+        <ul class="kp">
+          <li>Team selects a <b>medium-sized reference story</b> first</li>
+          <li>PO reads out the story to be estimated</li>
+          <li>Each member picks a card <b>face-down</b></li>
+          <li><b>All reveal simultaneously</b></li>
+          <li>Extreme values discuss their reasoning</li>
+          <li>New round until <b>consensus</b></li>
+        </ul>
+      </div>
+      <div class="split-col">
+        <div class="split-col-title" style="color:var(--accent)">Why simultaneously?</div>
+        <ul class="kp">
+          <li>Prevents anchoring bias from early reveals</li>
+          <li>Everyone must commit to an independent estimate</li>
+          <li>Forces structured discussion on outliers</li>
+          <li>The process surfaces hidden complexity</li>
+        </ul>
+      </div>
+    </div>
+
+    <p style="font-size:12px;color:var(--muted2);margin-bottom:10px">Card values (modified Fibonacci — gaps reflect estimation uncertainty at scale):</p>
+    <div class="poker-row">
+      <div class="poker-card">0</div>
+      <div class="poker-card">1</div>
+      <div class="poker-card">2</div>
+      <div class="poker-card">3</div>
+      <div class="poker-card">5</div>
+      <div class="poker-card">8</div>
+      <div class="poker-card">13</div>
+      <div class="poker-card">20</div>
+      <div class="poker-card">40</div>
+      <div class="poker-card">100</div>
+      <div class="poker-card special">∞</div>
+      <div class="poker-card special">?</div>
+      <div class="poker-card special">☕</div>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <b>Card meanings:</b> <b style="color:#a8d0f0">0</b> = too trivial to estimate. <b style="color:#a8d0f0">∞</b> = too large, must be split. <b style="color:#a8d0f0">?</b> = not enough information to estimate. <b style="color:#a8d0f0">☕</b> = team needs a break. The Fibonacci-like sequence intentionally has larger gaps at the top — precision at high complexity is meaningless.
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SYNTHESIS (always visible)
+══════════════════════════════════════ -->
+<div class="section-block" data-section="synthese">
+  <div class="sec-head"><span class="sec-icon">🔗</span><span>How It All Connects</span><div class="sec-line"></div></div>
+  <div class="card span-2 accent-green">
+    <div class="card-label">Synthesis</div>
+    <div class="card-title"><span class="card-icon">🔗</span>How It All Connects</div>
+    <div class="synth-row"><div class="synth-num">01</div><div class="synth-body">The <b>Product Owner</b> builds and orders the <b>Product Backlog</b> — the single source of truth for all required work, expressed as User Stories with acceptance criteria.</div></div>
+    <div class="synth-row"><div class="synth-num">02</div><div class="synth-body"><b>Sprint Planning</b> selects items from the Product Backlog into the <b>Sprint Backlog</b>. The team commits to a <b>Sprint Goal</b> — the why of the Sprint.</div></div>
+    <div class="synth-row"><div class="synth-num">03</div><div class="synth-body">During the Sprint, <b>Daily Scrums</b> keep the team synchronised. The <b>Scrum Master</b> removes impediments and enforces time-boxes.</div></div>
+    <div class="synth-row"><div class="synth-num">04</div><div class="synth-body">The Sprint produces an <b>Increment</b> meeting the <b>Definition of Done</b>. The <b>Sprint Review</b> demos it to stakeholders; the <b>Retrospective</b> improves the team process.</div></div>
+    <div class="synth-row"><div class="synth-num">05</div><div class="synth-body"><b>Story Points</b> and <b>Planning Poker</b> give the team a shared, bias-free way to estimate relative effort — feeding into <b>velocity</b> and long-term forecasting via burn-down charts.</div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     EXAM PREP
+══════════════════════════════════════ -->
+<div class="section-block" data-section="pruefung">
+  <div class="sec-head"><span class="sec-icon">🎯</span><span>Exam Preparation</span><div class="sec-line"></div></div>
+
+  <!-- Key terms -->
+  <div class="card span-2 accent-gold" style="margin-bottom:16px">
+    <div class="card-label">Definitions · memorise these</div>
+    <div class="card-title"><span class="card-icon">📖</span>Key Terms at a Glance</div>
+    <div class="def-cards">
+      <div class="def-card"><div class="def-card-term">Scrum</div><div class="def-card-body">Agile framework based on empirical process control (transparency, inspection, adaptation). Works in fixed Sprints with 3 roles, 3 artifacts, 5 events.</div></div>
+      <div class="def-card"><div class="def-card-term">Sprint</div><div class="def-card-body">Fixed-length iteration (max. 4 weeks) producing a usable Increment. Sprints are consecutive — no gaps or pauses between them.</div></div>
+      <div class="def-card"><div class="def-card-term">Product Backlog</div><div class="def-card-body">Single, ordered list of all required work. Owned by the PO. Properties: single, transparent, current, ordered.</div></div>
+      <div class="def-card"><div class="def-card-term">User Story</div><div class="def-card-body">"As [who] I want [what] so that [why]." Describes concrete value for a specific user group. Must follow INVEST criteria.</div></div>
+      <div class="def-card"><div class="def-card-term">Story Points</div><div class="def-card-body">Relative measure of effort/complexity — not time. Used to compare backlog items. Velocity = story points per Sprint.</div></div>
+      <div class="def-card"><div class="def-card-term">Definition of Done</div><div class="def-card-body">Shared checklist defining "complete" for any Increment. Items not meeting DoD cannot be released or presented at Sprint Review.</div></div>
+      <div class="def-card"><div class="def-card-term">Velocity</div><div class="def-card-body">Number of story points a team completes per Sprint. Stabilises over time; used for forecasting. Team-specific — not comparable across teams.</div></div>
+      <div class="def-card"><div class="def-card-term">Time-boxing</div><div class="def-card-body">Strict enforcement of maximum event durations. Scrum Master's responsibility. Prevents scope creep and keeps cadence predictable.</div></div>
+    </div>
+  </div>
+
+  <!-- Exam tips -->
+  <div class="card span-2 accent-gold" style="margin-bottom:16px">
+    <div class="card-label">Strategy</div>
+    <div class="card-title"><span class="card-icon">💡</span>Exam Tips</div>
+    <div class="tip-grid">
+      <div class="tip-item"><div class="tip-icon">3️⃣</div><div class="tip-title">3 · 3 · 5</div><div class="tip-text">Scrum has exactly 3 roles, 3 artifacts, and 5 events. Know them all by name — questions often ask you to list or classify them.</div></div>
+      <div class="tip-item"><div class="tip-icon">⏱</div><div class="tip-title">Time-boxes per event</div><div class="tip-text">Sprint Planning 8h, Daily 15min, Review 4h, Retro 3h — all for a 1-month Sprint. Scale proportionally for shorter Sprints.</div></div>
+      <div class="tip-item"><div class="tip-icon">📝</div><div class="tip-title">User story formula</div><div class="tip-text">Always use: "As [who] I want [what] so that [why]." Three distinct target groups = three distinct "who" values. Don't reuse.</div></div>
+      <div class="tip-item"><div class="tip-icon">✅</div><div class="tip-title">AC vs. DoD</div><div class="tip-text">Acceptance Criteria are per story — specific conditions agreed for that story. Definition of Done applies to all Increments — it's the team-wide quality bar.</div></div>
+      <div class="tip-item"><div class="tip-icon">🃏</div><div class="tip-title">Story points ≠ hours</div><div class="tip-text">Story points are relative and team-specific. Never state them as hours. Velocity is the mechanism that translates points into time forecasts.</div></div>
+      <div class="tip-item"><div class="tip-icon">🔄</div><div class="tip-title">Retrospective vs. Review</div><div class="tip-text">Review = inspect the product (Increment) with stakeholders. Retrospective = inspect the process (how the team worked). Common mix-up in exams.</div></div>
+    </div>
+  </div>
+
+  <!-- Quiz -->
+  <div class="card span-2">
+    <div class="card-label">Practice questions · click to reveal</div>
+    <div class="card-title"><span class="card-icon">🎯</span>Possible Exam Questions</div>
+
+    <div class="quiz-item" onclick="toggleQuiz(this)">
+      <div class="quiz-q">Name the 3 roles, 3 artifacts and 5 events of Scrum. <span class="quiz-arrow">▶</span></div>
+      <div class="quiz-a">
+        <strong>Roles:</strong> Product Owner, Scrum Master, Developer.<br><br>
+        <strong>Artifacts:</strong> Product Backlog, Sprint Backlog, Increment.<br><br>
+        <strong>Events:</strong> Sprint, Sprint Planning, Daily Scrum, Sprint Review, Sprint Retrospective.
+      </div>
+    </div>
+
+    <div class="quiz-item" onclick="toggleQuiz(this)">
+      <div class="quiz-q">What are the three pillars of empirical process control in Scrum? <span class="quiz-arrow">▶</span></div>
+      <div class="quiz-a"><strong>Transparency</strong> — shared understanding of work and standards. <strong>Inspection</strong> — frequent review of progress and artifacts. <strong>Adaptation</strong> — adjusting the process whenever deviations are found. All Scrum events are opportunities for inspection and adaptation.</div>
+    </div>
+
+    <div class="quiz-item" onclick="toggleQuiz(this)">
+      <div class="quiz-q">What is the difference between Product Backlog and Sprint Backlog? <span class="quiz-arrow">▶</span></div>
+      <div class="quiz-a">The <strong>Product Backlog</strong> is the complete, ordered list of all required work for the product — maintained by the PO, always evolving. The <strong>Sprint Backlog</strong> is the subset selected for one Sprint, plus the Sprint Goal and the Developers' plan — owned by the Developers and fixed for the Sprint duration.</div>
+    </div>
+
+    <div class="quiz-item" onclick="toggleQuiz(this)">
+      <div class="quiz-q">What is the difference between Sprint Review and Sprint Retrospective? <span class="quiz-arrow">▶</span></div>
+      <div class="quiz-a">The <strong>Sprint Review</strong> inspects the <em>Increment</em> — the team demos what was built to the Product Owner and stakeholders; the Product Backlog may be adapted. The <strong>Sprint Retrospective</strong> inspects the <em>team process</em> — how the team worked — and identifies improvements to implement in the next Sprint.</div>
+    </div>
+
+    <div class="quiz-item" onclick="toggleQuiz(this)">
+      <div class="quiz-q">What is the correct format for a User Story and what does INVEST stand for? <span class="quiz-arrow">▶</span></div>
+      <div class="quiz-a">
+        Format: <code>As [who] I want [what] so that [why].</code><br><br>
+        <strong>INVEST</strong>: <strong>I</strong>ndependent, <strong>N</strong>egotiable, <strong>V</strong>aluable, <strong>E</strong>stimatable, <strong>S</strong>mall, <strong>T</strong>estable. These criteria ensure stories are well-formed, deliverable and verifiable.
+      </div>
+    </div>
+
+    <div class="quiz-item" onclick="toggleQuiz(this)">
+      <div class="quiz-q">What are story points and what is velocity? <span class="quiz-arrow">▶</span></div>
+      <div class="quiz-a"><strong>Story points</strong> are a relative measure of effort, complexity and uncertainty — they are not hours or days. They allow backlog items to be compared to each other. <strong>Velocity</strong> is the number of story points a team completes per Sprint. It stabilises over time and is used for forecasting — but is team-specific and should not be compared across teams.</div>
+    </div>
+
+    <div class="quiz-item" onclick="toggleQuiz(this)">
+      <div class="quiz-q">Explain the Planning Poker process. Why are cards revealed simultaneously? <span class="quiz-arrow">▶</span></div>
+      <div class="quiz-a">The PO describes a story; each team member independently selects a card representing their estimate relative to the reference story, then all reveal at the same time. Those with extreme values explain their reasoning, and rounds continue until consensus.<br><br>Simultaneous reveal prevents <strong>anchoring bias</strong> — if one person reveals first, others tend to adjust toward that value rather than giving an independent estimate.</div>
+    </div>
+
+    <div class="quiz-item" onclick="toggleQuiz(this)">
+      <div class="quiz-q">What is the Definition of Done and why does it matter? <span class="quiz-arrow">▶</span></div>
+      <div class="quiz-a">The <strong>Definition of Done</strong> is a shared checklist defining what "complete" means for any Increment. It creates transparency by ensuring everyone agrees on quality standards. If an item doesn't meet the DoD it cannot be presented at the Sprint Review and returns to the Product Backlog. If an org-wide DoD exists, teams must use it as a minimum; otherwise, the Scrum Team defines its own.</div>
+    </div>
+
+    <div class="quiz-item" onclick="toggleQuiz(this)">
+      <div class="quiz-q">What does the Product Backlog hierarchy look like and what is each level? <span class="quiz-arrow">▶</span></div>
+      <div class="quiz-a">
+        <strong>Theme</strong> — the broad strategic topic or area.<br>
+        <strong>Feature</strong> — concrete functionality within that theme.<br>
+        <strong>User Story</strong> — specific value for a target user group, written in the "As / I want / so that" format.<br>
+        <strong>Task</strong> — small implementation steps broken out of a User Story, tracked in the Sprint Backlog.
+      </div>
+    </div>
+
+    <div class="quiz-item" onclick="toggleQuiz(this)">
+      <div class="quiz-q">What are the maximum time-boxes for each Scrum event (1-month Sprint)? <span class="quiz-arrow">▶</span></div>
+      <div class="quiz-a">
+        <strong>Sprint:</strong> max. 4 weeks (the container for all other events).<br>
+        <strong>Sprint Planning:</strong> max. 8 hours.<br>
+        <strong>Daily Scrum:</strong> max. 15 minutes.<br>
+        <strong>Sprint Review:</strong> max. 4 hours.<br>
+        <strong>Sprint Retrospective:</strong> max. 3 hours.<br><br>
+        For shorter Sprints, all time-boxes scale proportionally. The Scrum Master is responsible for enforcing them.
+      </div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<footer>
+  built by <a href="https://niklas-heringer.com">niklas-heringer.com</a> ·
+  <a href="https://github.com/mev0lent/security-cheatsheets" target="_blank">view on github</a> ·
+  open source, always free
+</footer>
+
+<script>
+const pills  = document.querySelectorAll('.tpill');
+const blocks = document.querySelectorAll('.section-block');
+
+pills.forEach(p => p.addEventListener('click', () => {
+  pills.forEach(x => x.classList.remove('active'));
+  p.classList.add('active');
+  const tab = p.dataset.tab;
+  blocks.forEach(b => {
+    const sec = b.dataset.section;
+    if (tab === 'alle') {
+      b.classList.remove('hidden');
+    } else if (sec === 'synthese') {
+      b.classList.toggle('hidden', tab === 'pruefung');
+    } else if (sec === 'pruefung') {
+      b.classList.toggle('hidden', tab !== 'pruefung');
+    } else if (sec === 'roles') {
+      // roles section also contains the overview + roles content
+      b.classList.toggle('hidden', tab !== 'roles');
+    } else {
+      b.classList.toggle('hidden', sec !== tab);
+    }
+  });
+}));
+
+function toggleQuiz(el) { el.classList.toggle('open'); }
+</script>
+</body>
+</html>
