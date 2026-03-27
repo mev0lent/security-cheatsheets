@@ -1495,75 +1495,76 @@
     </style>
 
     <!-- Banner -->
-    <div id="nh-cookie-banner" role="dialog" aria-label="Cookie-Einstellungen">
+    <div id="nh-cookie-banner" role="dialog" aria-label="Cookie settings">
       <div class="nh-cookie-header">
         <div class="nh-cookie-icon">
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" />
           </svg>
         </div>
-        <span class="nh-cookie-title">Datenschutzeinstellungen</span>
+        <span class="nh-cookie-title">Privacy settings</span>
         <span class="nh-cookie-domain">niklas-heringer.com</span>
       </div>
 
       <p class="nh-cookie-text">
-        Diese Website verwendet technisch notwendige Cookies sowie optionale Cookies für Newsletter-Tracking.
-        Weitere Informationen in der <a href="/privacy-and-cookies" target="_blank">Datenschutzerklärung</a>.
+        This website uses strictly necessary cookies and optional cookies for newsletter tracking.
+        Learn more in our <a href="/privacy-and-cookies" target="_blank">Privacy Policy</a>.
       </p>
 
       <div class="nh-cookie-actions">
-        <button class="nh-btn nh-btn-reject" onclick="nhCookieDecline()">Ablehnen</button>
-        <button class="nh-btn nh-btn-accept" onclick="nhCookieAcceptAll()">Alle akzeptieren</button>
-        <button class="nh-btn nh-btn-manage" onclick="nhCookieOpenModal()">Verwalten</button>
+        <button class="nh-btn nh-btn-reject" onclick="nhCookieDecline()">Decline</button>
+        <button class="nh-btn nh-btn-accept" onclick="nhCookieAcceptAll()">Accept all</button>
+        <button class="nh-btn nh-btn-manage" onclick="nhCookieOpenModal()">Manage</button>
       </div>
     </div>
 
     <!-- Manage modal -->
-    <div id="nh-cookie-modal" role="dialog" aria-modal="true" aria-label="Cookie-Kategorien verwalten">
+    <div id="nh-cookie-modal" role="dialog" aria-modal="true" aria-label="Manage cookie categories">
       <div class="nh-modal-box">
         <div class="nh-modal-header">
-          <span class="nh-modal-title">Cookies verwalten</span>
+          <span class="nh-modal-title">Manage cookies</span>
           <button class="nh-modal-close" onclick="nhCookieCloseModal()">&#x2715;</button>
         </div>
 
         <div class="nh-modal-body">
           <div class="nh-category">
             <div class="nh-category-header">
-              <span class="nh-category-name">Technisch notwendig</span>
-              <span class="nh-badge-required">Erforderlich</span>
+              <span class="nh-category-name">Strictly necessary</span>
+              <span class="nh-badge-required">Required</span>
             </div>
-            <p class="nh-category-desc">Notwendig für den Betrieb der Website. Beinhaltet Session-Cookies und
-              Sicherheitsfunktionen. Können nicht deaktiviert werden.</p>
+            <p class="nh-category-desc">Required for the website to function. Includes session cookies and security
+              features. Cannot be disabled.</p>
           </div>
 
           <div class="nh-category">
             <div class="nh-category-header">
-              <span class="nh-category-name">Newsletter & Marketing</span>
+              <span class="nh-category-name">Newsletter & marketing</span>
               <label class="nh-toggle">
                 <input type="checkbox" id="nh-toggle-marketing">
                 <span class="nh-toggle-track"></span>
               </label>
             </div>
-            <p class="nh-category-desc">Ermöglicht das Tracking von Newsletter-Öffnungen und Klicks, um relevantere
-              Inhalte zu versenden.</p>
+            <p class="nh-category-desc">Enables tracking of newsletter opens and clicks to deliver more relevant
+              content.
+            </p>
           </div>
 
           <div class="nh-category">
             <div class="nh-category-header">
-              <span class="nh-category-name">Stripe (Zahlungen)</span>
+              <span class="nh-category-name">Stripe (payments)</span>
               <label class="nh-toggle">
                 <input type="checkbox" id="nh-toggle-stripe" disabled checked>
                 <span class="nh-toggle-track"></span>
               </label>
             </div>
-            <p class="nh-category-desc">Stripe setzt technisch notwendige Cookies zur Betrugsprävention bei
-              Zahlungsvorgängen. Nur aktiv wenn du einen Kauf tätigst.</p>
+            <p class="nh-category-desc">Stripe sets strictly necessary cookies for fraud prevention during payment
+              transactions. Only active when making a purchase.</p>
           </div>
         </div>
 
         <div class="nh-modal-footer">
-          <button class="nh-btn nh-btn-accept-all" onclick="nhCookieAcceptAll()">Alle akzeptieren</button>
-          <button class="nh-btn nh-btn-save" onclick="nhCookieSavePreferences()">Auswahl speichern</button>
+          <button class="nh-btn nh-btn-accept-all" onclick="nhCookieAcceptAll()">Accept all</button>
+          <button class="nh-btn nh-btn-save" onclick="nhCookieSavePreferences()">Save preferences</button>
         </div>
       </div>
     </div>
