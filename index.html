@@ -1,408 +1,1523 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="icon" type="image/x-icon" href="/favicon.ico">
-<title>learn.niklas-heringer.com — Security Cheatsheets & Quizzes</title>
-<meta name="description" content="Free hands-on security cheatsheets and interactive quizzes on privilege escalation, Active Directory, web exploitation, CTF methodology and more. By Niklas Heringer.">
-<meta name="author" content="Niklas Heringer">
-<link rel="canonical" href="https://learn.niklas-heringer.com">
-<style>
-@font-face {
-  font-family: 'JetBrains Mono';
-  src: url('./fonts/JetBrainsMono-VariableFont_wght.ttf') format('truetype');
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'JetBrains Mono';
-  src: url('./fonts/JetBrainsMono-Italic-VariableFont_wght.ttf') format('truetype');
-  font-weight: 100 900;
-  font-style: italic;
-  font-display: swap;
-}
-</style>
-<style>
-  :root {
-    --bg:      #080f1a;
-    --bg2:     #0d1b2e;
-    --bg3:     #0f2744;
-    --border:  #1e3a5f;
-    --accent:  #0ea5e9;
-    --text:    #e2e8f0;
-    --muted:   #64748b;
-    --muted2:  #94a3b8;
-    --mono:    'JetBrains Mono', monospace;
-    --sans:    'DM Sans', sans-serif;
-    --green:   #5dd39e;
-    --red:     #a23319;
-    --gold:    #e9c286;
-  }
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 16px; line-height: 1.6; min-height: 100vh; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <title>learn.niklas-heringer.com — Security Cheatsheets & Quizzes</title>
+  <meta name="description"
+    content="Free hands-on security cheatsheets and interactive quizzes on privilege escalation, Active Directory, web exploitation, CTF methodology and more. By Niklas Heringer.">
+  <meta name="author" content="Niklas Heringer">
+  <link rel="canonical" href="https://learn.niklas-heringer.com">
+  <style>
+    @font-face {
+      font-family: 'JetBrains Mono';
+      src: url('./fonts/JetBrainsMono-VariableFont_wght.ttf') format('truetype');
+      font-weight: 100 900;
+      font-style: normal;
+      font-display: swap;
+    }
 
-  body::before {
-    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
-  }
-  body::after {
-    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
-    background-image: linear-gradient(rgba(93,211,158,0.025) 1px,transparent 1px), linear-gradient(90deg,rgba(93,211,158,0.025) 1px,transparent 1px);
-    background-size: 48px 48px;
-  }
+    @font-face {
+      font-family: 'JetBrains Mono';
+      src: url('./fonts/JetBrainsMono-Italic-VariableFont_wght.ttf') format('truetype');
+      font-weight: 100 900;
+      font-style: italic;
+      font-display: swap;
+    }
+  </style>
+  <style>
+    :root {
+      --bg: #080f1a;
+      --bg2: #0d1b2e;
+      --bg3: #0f2744;
+      --border: #1e3a5f;
+      --accent: #0ea5e9;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --muted2: #94a3b8;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'DM Sans', sans-serif;
+      --green: #5dd39e;
+      --red: #a23319;
+      --gold: #e9c286;
+    }
 
-  /* ── NAV ── */
-  nav { border-bottom: 1px solid var(--border); background: rgba(8,15,26,0.9); backdrop-filter: blur(14px); position: sticky; top: 0; z-index: 100; }
-  .nav-inner { display: flex; align-items: center; justify-content: space-between; padding: 11px 24px; max-width: 1100px; margin: 0 auto; }
-  .nav-left { display: flex; align-items: center; gap: 12px; }
-  .nav-avatar { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--red); object-fit: cover; box-shadow: 0 0 8px rgba(162,51,25,0.45); transition: box-shadow 0.2s; }
-  .nav-avatar:hover { box-shadow: 0 0 14px rgba(93,211,158,0.55); }
-  .nav-logo { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--green); text-decoration: none; letter-spacing: -0.02em; }
-  .nav-logo span { color: var(--muted); font-weight: 400; }
-  .nav-back { font-family: var(--mono); font-size: 11px; color: var(--muted); text-decoration: none; border: 1px solid var(--border); padding: 5px 12px; border-radius: 6px; transition: .2s; }
-  .nav-back:hover { color: var(--green); border-color: var(--green); }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-  /* ── HERO ── */
-  .hero { position: relative; z-index: 1; padding: 72px 0 52px; display: grid; grid-template-columns: auto 1fr; gap: 56px; align-items: center; max-width: 1100px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 16px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
 
-  /* avatar */
-  .hero-avatar-wrap { position: relative; flex-shrink: 0; }
-  .avatar-ring { width: 200px; height: 200px; border-radius: 50%; position: relative; display: flex; align-items: center; justify-content: center; }
-  .avatar-ring::before {
-    content: ''; position: absolute; inset: -4px; border-radius: 50%; z-index: 0;
-    background: conic-gradient(var(--red) 0deg, var(--gold) 120deg, var(--green) 240deg, var(--red) 360deg);
-    animation: spin 8s linear infinite;
-  }
-  .avatar-ring::after { content: ''; position: absolute; inset: -1px; border-radius: 50%; background: var(--bg); z-index: 1; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .avatar-img { width: 188px; height: 188px; border-radius: 50%; object-fit: cover; position: relative; z-index: 2; display: block; }
-  .avatar-glow { position: absolute; inset: -30px; border-radius: 50%; background: radial-gradient(circle, rgba(162,51,25,0.2) 0%, transparent 70%); z-index: -1; animation: pulse 4s ease-in-out infinite; }
-  @keyframes pulse { 0%,100% { transform: scale(1); opacity: .8; } 50% { transform: scale(1.08); opacity: 1; } }
-  .avatar-status { position: absolute; bottom: 6px; right: 6px; z-index: 10; background: var(--bg2); border: 1px solid var(--green); border-radius: 20px; padding: 3px 10px; font-family: var(--mono); font-size: 10px; color: var(--green); display: flex; align-items: center; gap: 5px; white-space: nowrap; }
-  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: blink 2s ease-in-out infinite; }
-  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    }
 
-  /* hero text */
-  .hero-text {}
-  .hero-eyebrow { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
-  .eyebrow-line { width: 32px; height: 2px; background: var(--red); border-radius: 1px; }
-  .eyebrow-text { font-family: var(--mono); font-size: 11px; color: var(--gold); letter-spacing: .12em; text-transform: uppercase; }
-  .hero h1 { font-family: var(--mono); font-size: clamp(26px,4vw,48px); font-weight: 700; line-height: 1.1; letter-spacing: -.03em; margin-bottom: 16px; }
-  .hero h1 .dim { color: var(--muted); font-weight: 400; }
-  .hero h1 .hl  { color: var(--green); }
-  .hero-bio { font-size: 15px; color: var(--muted2); max-width: 500px; margin-bottom: 28px; font-weight: 300; line-height: 1.7; }
-  .hero-bio strong { color: var(--gold); font-weight: 500; }
-  .hero-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 32px; }
-  .hero-pill { font-family: var(--mono); font-size: 11px; padding: 4px 12px; border-radius: 20px; border: 1px solid; letter-spacing: .04em; }
-  .pill-green { border-color: rgba(93,211,158,.3);  color: var(--green); background: rgba(93,211,158,.06); }
-  .pill-gold  { border-color: rgba(233,194,134,.3); color: var(--gold);  background: rgba(233,194,134,.06); }
-  .pill-red   { border-color: rgba(162,51,25,.4);   color: #e06040;      background: rgba(162,51,25,.08); }
-  .hero-stats { display: flex; gap: 32px; flex-wrap: wrap; }
-  .stat { text-align: left; }
-  .stat-num { font-family: var(--mono); font-size: 26px; font-weight: 700; color: var(--green); display: block; line-height: 1; margin-bottom: 4px; }
-  .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background-image: linear-gradient(rgba(93, 211, 158, 0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(93, 211, 158, 0.025) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
 
-  .hero-divider { height: 1px; background: linear-gradient(90deg, var(--red), var(--gold), var(--green), transparent); margin: 0 0 40px; opacity: .35; }
+    /* ── NAV ── */
+    nav {
+      border-bottom: 1px solid var(--border);
+      background: rgba(8, 15, 26, 0.9);
+      backdrop-filter: blur(14px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
 
-  @media (max-width: 640px) {
-    .hero { grid-template-columns: 1fr; text-align: center; gap: 32px; padding: 48px 24px 40px; }
-    .hero-avatar-wrap { margin: 0 auto; }
-    .hero-eyebrow, .hero-tags, .hero-stats { justify-content: center; }
-    .hero-bio { margin: 0 auto 28px; }
-    .stat { text-align: center; }
-    .avatar-ring { width: 160px; height: 160px; }
-    .avatar-img  { width: 150px; height: 150px; }
-  }
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
 
-  /* ── WRAP ── */
-  .wrap { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
 
-  /* ── SEARCH ── */
-  .search-wrap { max-width: 480px; margin: 0 0 0; position: relative; }
-  .search-wrap input { width: 100%; background: var(--bg2); border: 1px solid var(--border); color: var(--text); font-family: var(--mono); font-size: 13px; padding: 12px 16px 12px 42px; border-radius: 10px; outline: none; transition: border-color .2s; }
-  .search-wrap input:focus { border-color: var(--green); }
-  .search-wrap input::placeholder { color: var(--muted); }
-  .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 15px; pointer-events: none; }
+    .nav-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid var(--red);
+      object-fit: cover;
+      box-shadow: 0 0 8px rgba(162, 51, 25, 0.45);
+      transition: box-shadow 0.2s;
+    }
 
-  /* ── FILTER BAR ── */
-  .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; padding: 20px 0 8px; }
-  .filter-btn { font-family: var(--mono); font-size: 11px; padding: 5px 14px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; transition: all .2s; letter-spacing: .04em; }
-  .filter-btn:hover { color: var(--text); border-color: var(--muted2); }
-  .filter-btn.active { color: #080f1a; }
-  .filter-btn[data-filter="all"].active            { background: var(--green);  border-color: var(--green); }
-  .filter-btn[data-filter="web-security"].active   { background: #0ea5e9;       border-color: #0ea5e9; color: #fff; }
-  .filter-btn[data-filter="auth"].active           { background: #8b5cf6;       border-color: #8b5cf6; color: #fff; }
-  .filter-btn[data-filter="linux"].active          { background: var(--red);    border-color: var(--red); color: #fff; }
-  .filter-btn[data-filter="cve"].active            { background: var(--gold);   border-color: var(--gold); }
-  .filter-btn[data-filter="project-management"].active { background: #10b981;   border-color: #10b981; }
+    .nav-avatar:hover {
+      box-shadow: 0 0 14px rgba(93, 211, 158, 0.55);
+    }
 
-  /* ── CATEGORY ── */
-  .cat-section { margin-bottom: 12px; }
-  .cat-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 0 10px; cursor: pointer; border-bottom: 1px solid var(--border); user-select: none; }
-  .cat-header:hover .cat-title { color: var(--green); }
-  .cat-left { display: flex; align-items: center; gap: 10px; }
-  .cat-title { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); transition: color .2s; }
-  .cat-count { font-family: var(--mono); font-size: 10px; color: var(--muted); background: var(--bg2); border: 1px solid var(--border); padding: 1px 7px; border-radius: 10px; }
-  .cat-chevron { font-size: 10px; color: var(--muted); transition: transform .25s ease; }
-  .cat-section.collapsed .cat-chevron { transform: rotate(-90deg); }
-  .cat-section.collapsed .cat-grid { display: none; }
-  .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; padding: 16px 0 24px; }
+    .nav-logo {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--green);
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
 
-  /* ── CARDS ── */
-  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 24px; text-decoration: none; display: flex; flex-direction: column; gap: 12px; transition: border-color .2s, transform .15s, background .2s; position: relative; overflow: hidden; animation: fadeUp .35s ease both; }
-  .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--c1), var(--c2)); opacity: 0; transition: opacity .2s; }
-  .card:hover { border-color: var(--green); transform: translateY(-2px); background: var(--bg3); }
-  .card:hover::before { opacity: 1; }
-  .card-icon { font-size: 28px; line-height: 1; }
-  .card-tag { display: inline-block; font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; }
-  .card h2 { font-family: var(--mono); font-size: 16px; font-weight: 700; color: var(--text); letter-spacing: -.02em; }
-  .card p  { font-size: 13px; color: var(--muted2); line-height: 1.5; flex: 1; }
-  .card-meta { display: flex; align-items: center; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 12px; margin-top: 4px; }
-  .card-difficulty { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; }
-  .diff-beginner { background: rgba(34,197,94,.12);  color: #4ade80; }
-  .diff-medium   { background: rgba(251,191,36,.12);  color: #fbbf24; }
-  .diff-advanced { background: rgba(239,68,68,.12);   color: #f87171; }
-  .card.hidden-filter { display: none; }
+    .nav-logo span {
+      color: var(--muted);
+      font-weight: 400;
+    }
 
-  .empty-state { display: none; text-align: center; padding: 48px 0; font-family: var(--mono); font-size: 13px; color: var(--muted); }
-  .empty-state.show { display: block; }
+    .nav-back {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      text-decoration: none;
+      border: 1px solid var(--border);
+      padding: 5px 12px;
+      border-radius: 6px;
+      transition: .2s;
+    }
 
-  /* ── FOOTER ── */
-  footer { border-top: 1px solid var(--border); padding: 32px 24px; text-align: center; font-family: var(--mono); font-size: 12px; color: var(--muted); }
-  footer a { color: var(--green); text-decoration: none; }
-  footer a:hover { text-decoration: underline; }
+    .nav-back:hover {
+      color: var(--green);
+      border-color: var(--green);
+    }
 
-  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-  .hidden { display: none !important; }
-</style>
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      z-index: 1;
+      padding: 72px 0 52px;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 56px;
+      align-items: center;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding-left: 24px;
+      padding-right: 24px;
+    }
+
+    /* avatar */
+    .hero-avatar-wrap {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .avatar-ring {
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .avatar-ring::before {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      z-index: 0;
+      background: conic-gradient(var(--red) 0deg, var(--gold) 120deg, var(--green) 240deg, var(--red) 360deg);
+      animation: spin 8s linear infinite;
+    }
+
+    .avatar-ring::after {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: 50%;
+      background: var(--bg);
+      z-index: 1;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .avatar-img {
+      width: 188px;
+      height: 188px;
+      border-radius: 50%;
+      object-fit: cover;
+      position: relative;
+      z-index: 2;
+      display: block;
+    }
+
+    .avatar-glow {
+      position: absolute;
+      inset: -30px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(162, 51, 25, 0.2) 0%, transparent 70%);
+      z-index: -1;
+      animation: pulse 4s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        transform: scale(1);
+        opacity: .8;
+      }
+
+      50% {
+        transform: scale(1.08);
+        opacity: 1;
+      }
+    }
+
+    .avatar-status {
+      position: absolute;
+      bottom: 6px;
+      right: 6px;
+      z-index: 10;
+      background: var(--bg2);
+      border: 1px solid var(--green);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--green);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: blink 2s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: .3;
+      }
+    }
+
+    /* hero text */
+    .hero-text {}
+
+    .hero-eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .eyebrow-line {
+      width: 32px;
+      height: 2px;
+      background: var(--red);
+      border-radius: 1px;
+    }
+
+    .eyebrow-text {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--gold);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .hero h1 {
+      font-family: var(--mono);
+      font-size: clamp(26px, 4vw, 48px);
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -.03em;
+      margin-bottom: 16px;
+    }
+
+    .hero h1 .dim {
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    .hero h1 .hl {
+      color: var(--green);
+    }
+
+    .hero-bio {
+      font-size: 15px;
+      color: var(--muted2);
+      max-width: 500px;
+      margin-bottom: 28px;
+      font-weight: 300;
+      line-height: 1.7;
+    }
+
+    .hero-bio strong {
+      color: var(--gold);
+      font-weight: 500;
+    }
+
+    .hero-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 32px;
+    }
+
+    .hero-pill {
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid;
+      letter-spacing: .04em;
+    }
+
+    .pill-green {
+      border-color: rgba(93, 211, 158, .3);
+      color: var(--green);
+      background: rgba(93, 211, 158, .06);
+    }
+
+    .pill-gold {
+      border-color: rgba(233, 194, 134, .3);
+      color: var(--gold);
+      background: rgba(233, 194, 134, .06);
+    }
+
+    .pill-red {
+      border-color: rgba(162, 51, 25, .4);
+      color: #e06040;
+      background: rgba(162, 51, 25, .08);
+    }
+
+    .hero-stats {
+      display: flex;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      text-align: left;
+    }
+
+    .stat-num {
+      font-family: var(--mono);
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--green);
+      display: block;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    .hero-divider {
+      height: 1px;
+      background: linear-gradient(90deg, var(--red), var(--gold), var(--green), transparent);
+      margin: 0 0 40px;
+      opacity: .35;
+    }
+
+    @media (max-width: 640px) {
+      .hero {
+        grid-template-columns: 1fr;
+        text-align: center;
+        gap: 32px;
+        padding: 48px 24px 40px;
+      }
+
+      .hero-avatar-wrap {
+        margin: 0 auto;
+      }
+
+      .hero-eyebrow,
+      .hero-tags,
+      .hero-stats {
+        justify-content: center;
+      }
+
+      .hero-bio {
+        margin: 0 auto 28px;
+      }
+
+      .stat {
+        text-align: center;
+      }
+
+      .avatar-ring {
+        width: 160px;
+        height: 160px;
+      }
+
+      .avatar-img {
+        width: 150px;
+        height: 150px;
+      }
+    }
+
+    /* ── WRAP ── */
+    .wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ── SEARCH ── */
+    .search-wrap {
+      max-width: 480px;
+      margin: 0 0 0;
+      position: relative;
+    }
+
+    .search-wrap input {
+      width: 100%;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      padding: 12px 16px 12px 42px;
+      border-radius: 10px;
+      outline: none;
+      transition: border-color .2s;
+    }
+
+    .search-wrap input:focus {
+      border-color: var(--green);
+    }
+
+    .search-wrap input::placeholder {
+      color: var(--muted);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 15px;
+      pointer-events: none;
+    }
+
+    /* ── FILTER BAR ── */
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 20px 0 8px;
+    }
+
+    .filter-btn {
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 5px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .2s;
+      letter-spacing: .04em;
+    }
+
+    .filter-btn:hover {
+      color: var(--text);
+      border-color: var(--muted2);
+    }
+
+    .filter-btn.active {
+      color: #080f1a;
+    }
+
+    .filter-btn[data-filter="all"].active {
+      background: var(--green);
+      border-color: var(--green);
+    }
+
+    .filter-btn[data-filter="web-security"].active {
+      background: #0ea5e9;
+      border-color: #0ea5e9;
+      color: #fff;
+    }
+
+    .filter-btn[data-filter="auth"].active {
+      background: #8b5cf6;
+      border-color: #8b5cf6;
+      color: #fff;
+    }
+
+    .filter-btn[data-filter="linux"].active {
+      background: var(--red);
+      border-color: var(--red);
+      color: #fff;
+    }
+
+    .filter-btn[data-filter="cve"].active {
+      background: var(--gold);
+      border-color: var(--gold);
+    }
+
+    .filter-btn[data-filter="project-management"].active {
+      background: #10b981;
+      border-color: #10b981;
+    }
+
+    /* ── CATEGORY ── */
+    .cat-section {
+      margin-bottom: 12px;
+    }
+
+    .cat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0 10px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      user-select: none;
+    }
+
+    .cat-header:hover .cat-title {
+      color: var(--green);
+    }
+
+    .cat-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .cat-title {
+      font-family: var(--mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: var(--muted);
+      transition: color .2s;
+    }
+
+    .cat-count {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      padding: 1px 7px;
+      border-radius: 10px;
+    }
+
+    .cat-chevron {
+      font-size: 10px;
+      color: var(--muted);
+      transition: transform .25s ease;
+    }
+
+    .cat-section.collapsed .cat-chevron {
+      transform: rotate(-90deg);
+    }
+
+    .cat-section.collapsed .cat-grid {
+      display: none;
+    }
+
+    .cat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+      padding: 16px 0 24px;
+    }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      text-decoration: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: border-color .2s, transform .15s, background .2s;
+      position: relative;
+      overflow: hidden;
+      animation: fadeUp .35s ease both;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--c1), var(--c2));
+      opacity: 0;
+      transition: opacity .2s;
+    }
+
+    .card:hover {
+      border-color: var(--green);
+      transform: translateY(-2px);
+      background: var(--bg3);
+    }
+
+    .card:hover::before {
+      opacity: 1;
+    }
+
+    .card-icon {
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .card-tag {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-bottom: 2px;
+    }
+
+    .card h2 {
+      font-family: var(--mono);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -.02em;
+    }
+
+    .card p {
+      font-size: 13px;
+      color: var(--muted2);
+      line-height: 1.5;
+      flex: 1;
+    }
+
+    .card-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+      margin-top: 4px;
+    }
+
+    .card-difficulty {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .diff-beginner {
+      background: rgba(34, 197, 94, .12);
+      color: #4ade80;
+    }
+
+    .diff-medium {
+      background: rgba(251, 191, 36, .12);
+      color: #fbbf24;
+    }
+
+    .diff-advanced {
+      background: rgba(239, 68, 68, .12);
+      color: #f87171;
+    }
+
+    .card.hidden-filter {
+      display: none;
+    }
+
+    .empty-state {
+      display: none;
+      text-align: center;
+      padding: 48px 0;
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .empty-state.show {
+      display: block;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 24px;
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    footer a {
+      color: var(--green);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(16px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
 </head>
+
 <body>
 
-<nav>
-  <div class="nav-inner">
-    <div class="nav-left">
-      <img class="nav-avatar" src="/avatar.png" alt="Niklas Heringer">
-      <a class="nav-logo" href="https://learn.niklas-heringer.com">learn<span>.niklas-heringer.com</span></a>
+  <nav>
+    <div class="nav-inner">
+      <div class="nav-left">
+        <img class="nav-avatar" src="/avatar.png" alt="Niklas Heringer">
+        <a class="nav-logo" href="https://learn.niklas-heringer.com">learn<span>.niklas-heringer.com</span></a>
+      </div>
+      <a class="nav-back" href="https://niklas-heringer.com" target="_blank">blog ↗</a>
     </div>
-    <a class="nav-back" href="https://niklas-heringer.com" target="_blank">blog ↗</a>
-  </div>
-</nav>
+  </nav>
 
-<!-- HERO outside .wrap so it can be full-width padded -->
-<section class="hero">
-  <div class="hero-avatar-wrap">
-    <div class="avatar-ring">
-      <img class="avatar-img" src="/avatar.png" alt="Niklas Heringer">
+  <!-- HERO outside .wrap so it can be full-width padded -->
+  <section class="hero">
+    <div class="hero-avatar-wrap">
+      <div class="avatar-ring">
+        <img class="avatar-img" src="/avatar.png" alt="Niklas Heringer">
+      </div>
+      <div class="avatar-glow"></div>
+      <div class="avatar-status">
+        <span class="status-dot"></span>
+        hacking things
+      </div>
     </div>
-    <div class="avatar-glow"></div>
-    <div class="avatar-status">
-      <span class="status-dot"></span>
-      hacking things
+
+    <div class="hero-text">
+      <div class="hero-eyebrow">
+        <div class="eyebrow-line"></div>
+        <span class="eyebrow-text">niklas heringer</span>
+      </div>
+      <h1>
+        <span class="dim">security </span><span class="hl">cheatsheets</span><br>
+        <span class="dim">that actually </span>stick
+      </h1>
+      <p class="hero-bio">
+        Pentester-in-training, <strong>CTF player</strong>, and security blogger.
+        These are the reference sheets I actually use; hands-on, no fluff,
+        with quizzes to make the knowledge <strong>stick</strong>.
+      </p>
+      <div class="hero-tags">
+        <span class="hero-pill pill-green">research</span>
+        <span class="hero-pill pill-red">penetration testing</span>
+        <span class="hero-pill pill-gold">CTF / HackTheBox</span>
+        <span class="hero-pill pill-green">tooling</span>
+        <span class="hero-pill pill-gold">deep dives</span>
+      </div>
+      <div class="hero-stats">
+        <div class="stat"><span class="stat-num">8</span><span class="stat-label">Cheatsheets</span></div>
+        <div class="stat"><span class="stat-num">50+</span><span class="stat-label">Quiz questions</span></div>
+        <div class="stat"><span class="stat-num">100%</span><span class="stat-label">Free</span></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <div class="hero-divider"></div>
+
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input type="text" id="search" placeholder="search topics, techniques, tools..." autocomplete="off">
+    </div>
+
+    <div class="filter-bar">
+      <button class="filter-btn active" data-filter="all">all</button>
+      <button class="filter-btn" data-filter="web-security">web security</button>
+      <button class="filter-btn" data-filter="linux">linux</button>
+      <button class="filter-btn" data-filter="auth">auth & identity</button>
+      <button class="filter-btn" data-filter="cve">cves</button>
+      <button class="filter-btn" data-filter="project-management">project management</button>
+    </div>
+
+    <!-- Web Security -->
+    <div class="cat-section" data-category="web-security">
+      <div class="cat-header" onclick="toggleCat(this)">
+        <div class="cat-left"><span class="cat-title">web security</span><span class="cat-count">3</span></div>
+        <span class="cat-chevron">▼</span>
+      </div>
+      <div class="cat-grid">
+        <a class="card" href="./ssti/" style="--c1:#f59e0b;--c2:#ef4444"
+          data-tags="ssti server side template injection jinja2 twig freemarker flask django rce"
+          data-category="web-security">
+          <div class="card-icon">🧩</div>
+          <div>
+            <div class="card-tag" style="background:rgba(245,158,11,0.1);color:#fcd34d;">Web Security</div>
+            <h2>SSTI</h2>
+          </div>
+          <p>Server-side template injection in Jinja2, Twig, Freemarker — detection, payloads, and RCE chains.</p>
+          <div class="card-meta"><span>20 concepts · 10 quiz Qs</span><span
+              class="card-difficulty diff-medium">medium</span></div>
+        </a>
+        <a class="card" href="./xxe/" style="--c1:#0ea5e9;--c2:#06b6d4"
+          data-tags="xxe xml external entity injection file read ssrf blind oob" data-category="web-security">
+          <div class="card-icon">📄</div>
+          <div>
+            <div class="card-tag" style="background:rgba(14,165,233,0.1);color:#7dd3fc;">Web Security</div>
+            <h2>XXE Injection</h2>
+          </div>
+          <p>XML external entity attacks — file read, SSRF, blind/OOB exfiltration, and WAF bypass techniques.</p>
+          <div class="card-meta"><span>22 concepts · 10 quiz Qs</span><span
+              class="card-difficulty diff-medium">medium</span></div>
+        </a>
+        <a class="card" href="./saml/" style="--c1:#8b5cf6;--c2:#6366f1"
+          data-tags="saml sso single sign on xml signature wrapping authentication bypass" data-category="web-security">
+          <div class="card-icon">🔐</div>
+          <div>
+            <div class="card-tag" style="background:rgba(139,92,246,0.1);color:#c4b5fd;">Web Security</div>
+            <h2>SAML Attacks</h2>
+          </div>
+          <p>Signature wrapping, XML injection, authentication bypass, and common SSO misconfigurations.</p>
+          <div class="card-meta"><span>18 concepts · 10 quiz Qs</span><span
+              class="card-difficulty diff-advanced">advanced</span></div>
+        </a>
+      </div>
+    </div>
+
+    <!-- Linux -->
+    <div class="cat-section" data-category="linux">
+      <div class="cat-header" onclick="toggleCat(this)">
+        <div class="cat-left"><span class="cat-title">linux</span><span class="cat-count">1</span></div>
+        <span class="cat-chevron">▼</span>
+      </div>
+      <div class="cat-grid">
+        <a class="card" href="./linux-privilege-escalation/" style="--c1:#a23319;--c2:#e9c286"
+          data-tags="linux privesc sudo suid capabilities kernel exploit cron writable path" data-category="linux">
+          <div class="card-icon">🔺</div>
+          <div>
+            <div class="card-tag" style="background:rgba(162,51,25,0.1);color:#e06040;">Privilege Escalation</div>
+            <h2>Linux Privesc</h2>
+          </div>
+          <p>SUID, sudo misconfigs, capabilities, cron jobs, writable paths, kernel exploits — the full methodology.</p>
+          <div class="card-meta"><span>32 concepts · 10 quiz Qs</span><span
+              class="card-difficulty diff-medium">medium</span></div>
+        </a>
+      </div>
+    </div>
+
+    <!-- Auth -->
+    <div class="cat-section" data-category="auth">
+      <div class="cat-header" onclick="toggleCat(this)">
+        <div class="cat-left"><span class="cat-title">auth & identity</span><span class="cat-count">1</span></div>
+        <span class="cat-chevron">▼</span>
+      </div>
+      <div class="cat-grid">
+        <a class="card" href="./sessions/" style="--c1:#e9c286;--c2:#5dd39e"
+          data-tags="jwt json web token session cookie auth token alg none signature bypass claims hs256 rs256 session fixation hijacking storage"
+          data-category="auth">
+          <div class="card-icon">🔑</div>
+          <div>
+            <div class="card-tag" style="background:rgba(233,194,134,0.1);color:#e9c286;">Auth & Identity</div>
+            <h2>Sessions & Auth Tokens</h2>
+          </div>
+          <p>JWT attacks, session fixation, cookie security, token storage mistakes — the full picture of broken auth.
+          </p>
+          <div class="card-meta"><span>25 concepts · 10 quiz Qs</span><span
+              class="card-difficulty diff-medium">medium</span></div>
+        </a>
+      </div>
+    </div>
+
+    <!-- CVEs -->
+    <div class="cat-section" data-category="cve">
+      <div class="cat-header" onclick="toggleCat(this)">
+        <div class="cat-left"><span class="cat-title">cves & specific vulns</span><span class="cat-count">1</span></div>
+        <span class="cat-chevron">▼</span>
+      </div>
+      <div class="cat-grid">
+        <a class="card" href="./cve/samlstorm/" style="--c1:#ef4444;--c2:#8b5cf6"
+          data-tags="samlstorm cve saml ruby omniauth authentication bypass critical" data-category="cve">
+          <div class="card-icon">⚡</div>
+          <div>
+            <div class="card-tag" style="background:rgba(239,68,68,0.1);color:#f87171;">CVE Deep-Dive</div>
+            <h2>SAMLStorm</h2>
+          </div>
+          <p>Critical authentication bypass in ruby-saml — how it works, what's exploitable, and how to patch.</p>
+          <div class="card-meta"><span>deep-dive · 8 quiz Qs</span><span
+              class="card-difficulty diff-advanced">advanced</span></div>
+        </a>
+      </div>
+    </div>
+
+    <!-- Project Management -->
+    <div class="cat-section" data-category="project-management">
+      <div class="cat-header" onclick="toggleCat(this)">
+        <div class="cat-left"><span class="cat-title">project management</span><span class="cat-count">2</span></div>
+        <span class="cat-chevron">▼</span>
+      </div>
+      <div class="cat-grid">
+        <a class="card" href="./project-management/part-one/" style="--c1:#10b981;--c2:#e5c07b"
+          data-tags="project management stacey matrix wbs work breakdown structure sequence plan effort estimation network diagram gantt chart critical path milestones float buffer classical pm agile hybrid"
+          data-category="project-management">
+          <div class="card-icon">📋</div>
+          <div>
+            <div class="card-tag" style="background:rgba(16,185,129,0.1);color:#6ee7b7;">Project Management</div>
+            <h2>PM Part 1 — Fundamentals</h2>
+          </div>
+          <p>Stacey Matrix, planning chain, network diagrams, Gantt charts, critical path and milestones — the core of
+            classical PM.</p>
+          <div class="card-meta"><span>5 topics · 8 quiz Qs</span><span
+              class="card-difficulty diff-medium">medium</span></div>
+        </a>
+        <a class="card" href="./project-management/part-two/" style="--c1:#6366f1;--c2:#10b981"
+          data-tags="project management scrum agile roles product owner scrum master developer sprint backlog user stories story points planning poker velocity burn-down definition of done invest acceptance criteria"
+          data-category="project-management">
+          <div class="card-icon">🔄</div>
+          <div>
+            <div class="card-tag" style="background:rgba(99,102,241,0.1);color:#a5b4fc;">Project Management</div>
+            <h2>PM Part 2 — Scrum</h2>
+          </div>
+          <p>Roles, artifacts, events, user stories, acceptance criteria, Planning Poker and story point estimation.</p>
+          <div class="card-meta"><span>6 topics · 10 quiz Qs</span><span
+              class="card-difficulty diff-medium">medium</span></div>
+        </a>
+      </div>
+    </div>
+
+    <div class="empty-state" id="empty-state">no results found; try a <i>different</i> search term</div>
+  </div>
+
+  <div style="max-width:600px;margin:48px auto 0;padding:0 24px">
+    <div style="height:40vmin;min-height:360px">
+      <script src="https://cdn.jsdelivr.net/ghost/signup-form@~0.3/umd/signup-form.min.js" data-text-color="#e2e8f0"
+        data-button-color="#5dd39e" data-button-text-color="#080f1a" data-title="Niklas Heringer"
+        data-description="Cybersecurity & Math: Deep dives, structured learning and the occasional writeup; when something's worth writing about."
+        data-icon="https://niklas-heringer.com/content/images/size/w192h192/size/w256h256/2025/11/Design-ohne-Titel.png"
+        data-site="https://niklas-heringer.com/" data-locale="en" async></script>
     </div>
   </div>
 
-  <div class="hero-text">
-    <div class="hero-eyebrow">
-      <div class="eyebrow-line"></div>
-      <span class="eyebrow-text">niklas heringer</span>
+  <footer>
+    built by <a href="https://niklas-heringer.com">niklas-heringer.com</a> ·
+    <a href="https://github.com/mev0lent/security-cheatsheets" target="_blank">view on github</a> ·
+    <a href="./info.html">Impressum & Datenschutz</a>
+  </footer>
+
+  <script>
+    function toggleCat(h) { h.closest('.cat-section').classList.toggle('collapsed'); }
+
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    const catSections = document.querySelectorAll('.cat-section');
+    const searchInput = document.getElementById('search');
+
+    filterBtns.forEach(btn => btn.addEventListener('click', () => {
+      filterBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      applyFilters();
+    }));
+    searchInput.addEventListener('input', applyFilters);
+
+    function applyFilters() {
+      const f = document.querySelector('.filter-btn.active').dataset.filter;
+      const q = searchInput.value.toLowerCase().trim();
+      let any = false;
+      catSections.forEach(sec => {
+        const cat = sec.dataset.category;
+        if (f !== 'all' && f !== cat) { sec.classList.add('hidden'); return; }
+        sec.classList.remove('hidden');
+        let n = 0;
+        sec.querySelectorAll('.card').forEach(card => {
+          const match = !q || (card.dataset.tags + ' ' + card.textContent).toLowerCase().includes(q);
+          card.classList.toggle('hidden-filter', !match);
+          if (match) { n++; any = true; }
+        });
+        if (q && n === 0) sec.classList.add('hidden');
+        if (q && n > 0) sec.classList.remove('collapsed');
+      });
+      document.getElementById('empty-state').classList.toggle('show', !any && !!q);
+    }
+  </script>
+
+  <!-- ============================================================
+     COOKIE CONSENT BANNER
+     Inject this entire block into your Ghost/GitHub Pages site.
+     Place before </body> or in Ghost: Settings > Code Injection > Footer
+     ============================================================ -->
+  <div id="nh-cookie-root"></div>
+
+  <style id="nh-cookie-styles">
+    #nh-cookie-root * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    #nh-cookie-banner {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(120px);
+      width: min(560px, calc(100vw - 32px));
+      background: #0f0f0f;
+      border: 1px solid #2a2a2a;
+      border-radius: 16px;
+      padding: 20px 24px;
+      z-index: 99999;
+      opacity: 0;
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    #nh-cookie-banner.visible {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    .nh-cookie-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .nh-cookie-icon {
+      width: 28px;
+      height: 28px;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .nh-cookie-icon svg {
+      width: 14px;
+      height: 14px;
+      fill: #888;
+    }
+
+    .nh-cookie-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: #e8e8e8;
+      letter-spacing: 0.02em;
+    }
+
+    .nh-cookie-domain {
+      font-size: 11px;
+      color: #555;
+      margin-left: auto;
+    }
+
+    .nh-cookie-text {
+      font-size: 12.5px;
+      color: #888;
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+
+    .nh-cookie-text a {
+      color: #aaa;
+      text-decoration: none;
+      border-bottom: 1px solid #333;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .nh-cookie-text a:hover {
+      color: #e8e8e8;
+      border-color: #666;
+    }
+
+    .nh-cookie-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .nh-btn {
+      font-size: 12px;
+      font-weight: 500;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      border: none;
+      letter-spacing: 0.02em;
+    }
+
+    .nh-btn-accept {
+      background: #e8e8e8;
+      color: #0f0f0f;
+      flex: 1;
+    }
+
+    .nh-btn-accept:hover {
+      background: #fff;
+    }
+
+    .nh-btn-reject {
+      background: transparent;
+      color: #666;
+      border: 1px solid #2a2a2a;
+      flex: 1;
+    }
+
+    .nh-btn-reject:hover {
+      color: #aaa;
+      border-color: #444;
+    }
+
+    .nh-btn-manage {
+      background: transparent;
+      color: #444;
+      padding: 8px 10px;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .nh-btn-manage:hover {
+      color: #888;
+    }
+
+    /* Modal */
+    #nh-cookie-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 100000;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      backdrop-filter: blur(4px);
+    }
+
+    #nh-cookie-modal.open {
+      display: flex;
+    }
+
+    .nh-modal-box {
+      background: #0f0f0f;
+      border: 1px solid #2a2a2a;
+      border-radius: 16px;
+      width: min(480px, 100%);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .nh-modal-header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid #1a1a1a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .nh-modal-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: #e8e8e8;
+    }
+
+    .nh-modal-close {
+      background: none;
+      border: none;
+      color: #555;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 0 4px;
+      line-height: 1;
+      transition: color 0.15s;
+    }
+
+    .nh-modal-close:hover {
+      color: #aaa;
+    }
+
+    .nh-modal-body {
+      padding: 0 24px 8px;
+    }
+
+    .nh-category {
+      padding: 16px 0;
+      border-bottom: 1px solid #1a1a1a;
+    }
+
+    .nh-category:last-child {
+      border-bottom: none;
+    }
+
+    .nh-category-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .nh-category-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: #e8e8e8;
+    }
+
+    .nh-category-desc {
+      font-size: 12px;
+      color: #666;
+      line-height: 1.55;
+    }
+
+    .nh-toggle {
+      position: relative;
+      width: 36px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .nh-toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+      position: absolute;
+    }
+
+    .nh-toggle-track {
+      position: absolute;
+      inset: 0;
+      background: #2a2a2a;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: background 0.2s;
+      border: 1px solid #333;
+    }
+
+    .nh-toggle input:checked+.nh-toggle-track {
+      background: #e8e8e8;
+    }
+
+    .nh-toggle-track::after {
+      content: '';
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #555;
+      top: 2px;
+      left: 2px;
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    .nh-toggle input:checked+.nh-toggle-track::after {
+      transform: translateX(16px);
+      background: #0f0f0f;
+    }
+
+    .nh-toggle input:disabled+.nh-toggle-track {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .nh-badge-required {
+      font-size: 10px;
+      font-weight: 500;
+      color: #555;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 4px;
+      padding: 2px 7px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .nh-modal-footer {
+      padding: 16px 24px 20px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .nh-btn-save {
+      background: #e8e8e8;
+      color: #0f0f0f;
+      flex: 1;
+    }
+
+    .nh-btn-save:hover {
+      background: #fff;
+    }
+
+    .nh-btn-accept-all {
+      background: transparent;
+      color: #666;
+      border: 1px solid #2a2a2a;
+      flex: 1;
+    }
+
+    .nh-btn-accept-all:hover {
+      color: #aaa;
+      border-color: #444;
+    }
+  </style>
+
+  <!-- Banner -->
+  <div id="nh-cookie-banner" role="dialog" aria-label="Cookie-Einstellungen">
+    <div class="nh-cookie-header">
+      <div class="nh-cookie-icon">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" />
+        </svg>
+      </div>
+      <span class="nh-cookie-title">Datenschutzeinstellungen</span>
+      <span class="nh-cookie-domain">niklas-heringer.com</span>
     </div>
-    <h1>
-      <span class="dim">security </span><span class="hl">cheatsheets</span><br>
-      <span class="dim">that actually </span>stick
-    </h1>
-    <p class="hero-bio">
-      Pentester-in-training, <strong>CTF player</strong>, and security blogger.
-      These are the reference sheets I actually use; hands-on, no fluff,
-      with quizzes to make the knowledge <strong>stick</strong>.
+
+    <p class="nh-cookie-text">
+      Diese Website verwendet technisch notwendige Cookies sowie optionale Cookies für Newsletter-Tracking.
+      Weitere Informationen in der <a href="/privacy-and-cookies" target="_blank">Datenschutzerklärung</a>.
     </p>
-    <div class="hero-tags">
-      <span class="hero-pill pill-green">research</span>
-      <span class="hero-pill pill-red">penetration testing</span>
-      <span class="hero-pill pill-gold">CTF / HackTheBox</span>
-      <span class="hero-pill pill-green">tooling</span>
-      <span class="hero-pill pill-gold">deep dives</span>
-    </div>
-    <div class="hero-stats">
-      <div class="stat"><span class="stat-num">8</span><span class="stat-label">Cheatsheets</span></div>
-      <div class="stat"><span class="stat-num">50+</span><span class="stat-label">Quiz questions</span></div>
-      <div class="stat"><span class="stat-num">100%</span><span class="stat-label">Free</span></div>
-    </div>
-  </div>
-</section>
 
-<div class="wrap">
-  <div class="hero-divider"></div>
-
-  <div class="search-wrap">
-    <span class="search-icon">⌕</span>
-    <input type="text" id="search" placeholder="search topics, techniques, tools..." autocomplete="off">
-  </div>
-
-  <div class="filter-bar">
-    <button class="filter-btn active" data-filter="all">all</button>
-    <button class="filter-btn" data-filter="web-security">web security</button>
-    <button class="filter-btn" data-filter="linux">linux</button>
-    <button class="filter-btn" data-filter="auth">auth & identity</button>
-    <button class="filter-btn" data-filter="cve">cves</button>
-    <button class="filter-btn" data-filter="project-management">project management</button>
-  </div>
-
-  <!-- Web Security -->
-  <div class="cat-section" data-category="web-security">
-    <div class="cat-header" onclick="toggleCat(this)">
-      <div class="cat-left"><span class="cat-title">web security</span><span class="cat-count">3</span></div>
-      <span class="cat-chevron">▼</span>
-    </div>
-    <div class="cat-grid">
-      <a class="card" href="./ssti/" style="--c1:#f59e0b;--c2:#ef4444" data-tags="ssti server side template injection jinja2 twig freemarker flask django rce" data-category="web-security">
-        <div class="card-icon">🧩</div>
-        <div><div class="card-tag" style="background:rgba(245,158,11,0.1);color:#fcd34d;">Web Security</div><h2>SSTI</h2></div>
-        <p>Server-side template injection in Jinja2, Twig, Freemarker — detection, payloads, and RCE chains.</p>
-        <div class="card-meta"><span>20 concepts · 10 quiz Qs</span><span class="card-difficulty diff-medium">medium</span></div>
-      </a>
-      <a class="card" href="./xxe/" style="--c1:#0ea5e9;--c2:#06b6d4" data-tags="xxe xml external entity injection file read ssrf blind oob" data-category="web-security">
-        <div class="card-icon">📄</div>
-        <div><div class="card-tag" style="background:rgba(14,165,233,0.1);color:#7dd3fc;">Web Security</div><h2>XXE Injection</h2></div>
-        <p>XML external entity attacks — file read, SSRF, blind/OOB exfiltration, and WAF bypass techniques.</p>
-        <div class="card-meta"><span>22 concepts · 10 quiz Qs</span><span class="card-difficulty diff-medium">medium</span></div>
-      </a>
-      <a class="card" href="./saml/" style="--c1:#8b5cf6;--c2:#6366f1" data-tags="saml sso single sign on xml signature wrapping authentication bypass" data-category="web-security">
-        <div class="card-icon">🔐</div>
-        <div><div class="card-tag" style="background:rgba(139,92,246,0.1);color:#c4b5fd;">Web Security</div><h2>SAML Attacks</h2></div>
-        <p>Signature wrapping, XML injection, authentication bypass, and common SSO misconfigurations.</p>
-        <div class="card-meta"><span>18 concepts · 10 quiz Qs</span><span class="card-difficulty diff-advanced">advanced</span></div>
-      </a>
+    <div class="nh-cookie-actions">
+      <button class="nh-btn nh-btn-reject" onclick="nhCookieDecline()">Ablehnen</button>
+      <button class="nh-btn nh-btn-accept" onclick="nhCookieAcceptAll()">Alle akzeptieren</button>
+      <button class="nh-btn nh-btn-manage" onclick="nhCookieOpenModal()">Verwalten</button>
     </div>
   </div>
 
-  <!-- Linux -->
-  <div class="cat-section" data-category="linux">
-    <div class="cat-header" onclick="toggleCat(this)">
-      <div class="cat-left"><span class="cat-title">linux</span><span class="cat-count">1</span></div>
-      <span class="cat-chevron">▼</span>
-    </div>
-    <div class="cat-grid">
-      <a class="card" href="./linux-privilege-escalation/" style="--c1:#a23319;--c2:#e9c286" data-tags="linux privesc sudo suid capabilities kernel exploit cron writable path" data-category="linux">
-        <div class="card-icon">🔺</div>
-        <div><div class="card-tag" style="background:rgba(162,51,25,0.1);color:#e06040;">Privilege Escalation</div><h2>Linux Privesc</h2></div>
-        <p>SUID, sudo misconfigs, capabilities, cron jobs, writable paths, kernel exploits — the full methodology.</p>
-        <div class="card-meta"><span>32 concepts · 10 quiz Qs</span><span class="card-difficulty diff-medium">medium</span></div>
-      </a>
-    </div>
-  </div>
+  <!-- Manage modal -->
+  <div id="nh-cookie-modal" role="dialog" aria-modal="true" aria-label="Cookie-Kategorien verwalten">
+    <div class="nh-modal-box">
+      <div class="nh-modal-header">
+        <span class="nh-modal-title">Cookies verwalten</span>
+        <button class="nh-modal-close" onclick="nhCookieCloseModal()">&#x2715;</button>
+      </div>
 
-  <!-- Auth -->
-  <div class="cat-section" data-category="auth">
-    <div class="cat-header" onclick="toggleCat(this)">
-      <div class="cat-left"><span class="cat-title">auth & identity</span><span class="cat-count">1</span></div>
-      <span class="cat-chevron">▼</span>
-    </div>
-    <div class="cat-grid">
-      <a class="card" href="./sessions/" style="--c1:#e9c286;--c2:#5dd39e" data-tags="jwt json web token session cookie auth token alg none signature bypass claims hs256 rs256 session fixation hijacking storage" data-category="auth">
-        <div class="card-icon">🔑</div>
-        <div><div class="card-tag" style="background:rgba(233,194,134,0.1);color:#e9c286;">Auth & Identity</div><h2>Sessions & Auth Tokens</h2></div>
-        <p>JWT attacks, session fixation, cookie security, token storage mistakes — the full picture of broken auth.</p>
-        <div class="card-meta"><span>25 concepts · 10 quiz Qs</span><span class="card-difficulty diff-medium">medium</span></div>
-      </a>
-    </div>
-  </div>
+      <div class="nh-modal-body">
+        <div class="nh-category">
+          <div class="nh-category-header">
+            <span class="nh-category-name">Technisch notwendig</span>
+            <span class="nh-badge-required">Erforderlich</span>
+          </div>
+          <p class="nh-category-desc">Notwendig für den Betrieb der Website. Beinhaltet Session-Cookies und
+            Sicherheitsfunktionen. Können nicht deaktiviert werden.</p>
+        </div>
 
-  <!-- CVEs -->
-  <div class="cat-section" data-category="cve">
-    <div class="cat-header" onclick="toggleCat(this)">
-      <div class="cat-left"><span class="cat-title">cves & specific vulns</span><span class="cat-count">1</span></div>
-      <span class="cat-chevron">▼</span>
-    </div>
-    <div class="cat-grid">
-      <a class="card" href="./cve/samlstorm/" style="--c1:#ef4444;--c2:#8b5cf6" data-tags="samlstorm cve saml ruby omniauth authentication bypass critical" data-category="cve">
-        <div class="card-icon">⚡</div>
-        <div><div class="card-tag" style="background:rgba(239,68,68,0.1);color:#f87171;">CVE Deep-Dive</div><h2>SAMLStorm</h2></div>
-        <p>Critical authentication bypass in ruby-saml — how it works, what's exploitable, and how to patch.</p>
-        <div class="card-meta"><span>deep-dive · 8 quiz Qs</span><span class="card-difficulty diff-advanced">advanced</span></div>
-      </a>
-    </div>
-  </div>
+        <div class="nh-category">
+          <div class="nh-category-header">
+            <span class="nh-category-name">Newsletter & Marketing</span>
+            <label class="nh-toggle">
+              <input type="checkbox" id="nh-toggle-marketing">
+              <span class="nh-toggle-track"></span>
+            </label>
+          </div>
+          <p class="nh-category-desc">Ermöglicht das Tracking von Newsletter-Öffnungen und Klicks, um relevantere
+            Inhalte zu versenden.</p>
+        </div>
 
-   <!-- Project Management -->
-  <div class="cat-section" data-category="project-management">
-    <div class="cat-header" onclick="toggleCat(this)">
-      <div class="cat-left"><span class="cat-title">project management</span><span class="cat-count">2</span></div>
-      <span class="cat-chevron">▼</span>
-    </div>
-    <div class="cat-grid">
-      <a class="card" href="./project-management/part-one/" style="--c1:#10b981;--c2:#e5c07b" data-tags="project management stacey matrix wbs work breakdown structure sequence plan effort estimation network diagram gantt chart critical path milestones float buffer classical pm agile hybrid" data-category="project-management">
-        <div class="card-icon">📋</div>
-        <div><div class="card-tag" style="background:rgba(16,185,129,0.1);color:#6ee7b7;">Project Management</div><h2>PM Part 1 — Fundamentals</h2></div>
-        <p>Stacey Matrix, planning chain, network diagrams, Gantt charts, critical path and milestones — the core of classical PM.</p>
-        <div class="card-meta"><span>5 topics · 8 quiz Qs</span><span class="card-difficulty diff-medium">medium</span></div>
-      </a>
-      <a class="card" href="./project-management/part-two/" style="--c1:#6366f1;--c2:#10b981" data-tags="project management scrum agile roles product owner scrum master developer sprint backlog user stories story points planning poker velocity burn-down definition of done invest acceptance criteria" data-category="project-management">
-        <div class="card-icon">🔄</div>
-        <div><div class="card-tag" style="background:rgba(99,102,241,0.1);color:#a5b4fc;">Project Management</div><h2>PM Part 2 — Scrum</h2></div>
-        <p>Roles, artifacts, events, user stories, acceptance criteria, Planning Poker and story point estimation.</p>
-        <div class="card-meta"><span>6 topics · 10 quiz Qs</span><span class="card-difficulty diff-medium">medium</span></div>
-      </a>
+        <div class="nh-category">
+          <div class="nh-category-header">
+            <span class="nh-category-name">Stripe (Zahlungen)</span>
+            <label class="nh-toggle">
+              <input type="checkbox" id="nh-toggle-stripe" disabled checked>
+              <span class="nh-toggle-track"></span>
+            </label>
+          </div>
+          <p class="nh-category-desc">Stripe setzt technisch notwendige Cookies zur Betrugsprävention bei
+            Zahlungsvorgängen. Nur aktiv wenn du einen Kauf tätigst.</p>
+        </div>
+      </div>
+
+      <div class="nh-modal-footer">
+        <button class="nh-btn nh-btn-accept-all" onclick="nhCookieAcceptAll()">Alle akzeptieren</button>
+        <button class="nh-btn nh-btn-save" onclick="nhCookieSavePreferences()">Auswahl speichern</button>
+      </div>
     </div>
   </div>
 
-  <div class="empty-state" id="empty-state">no results found; try a <i>different</i> search term</div>
-</div>
+  <script id="nh-cookie-script">
+    (function () {
+      var STORAGE_KEY = 'nh_cookie_consent';
+      var banner = document.getElementById('nh-cookie-banner');
+      var modal = document.getElementById('nh-cookie-modal');
 
-<div style="max-width:600px;margin:48px auto 0;padding:0 24px">
-  <div style="height:40vmin;min-height:360px">
-    <script src="https://cdn.jsdelivr.net/ghost/signup-form@~0.3/umd/signup-form.min.js"
-      data-text-color="#e2e8f0"
-      data-button-color="#5dd39e"
-      data-button-text-color="#080f1a"
-      data-title="Niklas Heringer"
-      data-description="Cybersecurity & Math: Deep dives, structured learning and the occasional writeup; when something's worth writing about."
-      data-icon="https://niklas-heringer.com/content/images/size/w192h192/size/w256h256/2025/11/Design-ohne-Titel.png"
-      data-site="https://niklas-heringer.com/"
-      data-locale="en" async></script>
-  </div>
-</div>
+      function getConsent() {
+        try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch (e) { return null; }
+      }
 
-<footer>
-  built by <a href="https://niklas-heringer.com">niklas-heringer.com</a> ·
-  <a href="https://github.com/mev0lent/security-cheatsheets" target="_blank">view on github</a> ·
-  <a href="./info.html">Impressum & Datenschutz</a>
-</footer>
+      function setConsent(prefs) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+      }
 
-<script>
-function toggleCat(h) { h.closest('.cat-section').classList.toggle('collapsed'); }
+      function hideBanner() {
+        banner.classList.remove('visible');
+        setTimeout(function () { banner.style.display = 'none'; }, 400);
+      }
 
-const filterBtns  = document.querySelectorAll('.filter-btn');
-const catSections = document.querySelectorAll('.cat-section');
-const searchInput = document.getElementById('search');
+      function applyConsent(prefs) {
+        if (prefs.marketing) {
+          // Load your newsletter tracker here, e.g.:
+          // loadNewsletterTracker();
+          console.log('[CookieConsent] Marketing cookies accepted');
+        } else {
+          console.log('[CookieConsent] Marketing cookies declined');
+        }
+      }
 
-filterBtns.forEach(btn => btn.addEventListener('click', () => {
-  filterBtns.forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  applyFilters();
-}));
-searchInput.addEventListener('input', applyFilters);
+      window.nhCookieAcceptAll = function () {
+        var prefs = { necessary: true, marketing: true, stripe: true, timestamp: Date.now() };
+        setConsent(prefs);
+        applyConsent(prefs);
+        hideBanner();
+        nhCookieCloseModal();
+      };
 
-function applyFilters() {
-  const f = document.querySelector('.filter-btn.active').dataset.filter;
-  const q = searchInput.value.toLowerCase().trim();
-  let any = false;
-  catSections.forEach(sec => {
-    const cat = sec.dataset.category;
-    if (f !== 'all' && f !== cat) { sec.classList.add('hidden'); return; }
-    sec.classList.remove('hidden');
-    let n = 0;
-    sec.querySelectorAll('.card').forEach(card => {
-      const match = !q || (card.dataset.tags + ' ' + card.textContent).toLowerCase().includes(q);
-      card.classList.toggle('hidden-filter', !match);
-      if (match) { n++; any = true; }
-    });
-    if (q && n === 0) sec.classList.add('hidden');
-    if (q && n > 0)  sec.classList.remove('collapsed');
-  });
-  document.getElementById('empty-state').classList.toggle('show', !any && !!q);
-}
-</script>
+      window.nhCookieDecline = function () {
+        var prefs = { necessary: true, marketing: false, stripe: false, timestamp: Date.now() };
+        setConsent(prefs);
+        applyConsent(prefs);
+        hideBanner();
+      };
+
+      window.nhCookieSavePreferences = function () {
+        var marketingOn = document.getElementById('nh-toggle-marketing').checked;
+        var prefs = { necessary: true, marketing: marketingOn, stripe: true, timestamp: Date.now() };
+        setConsent(prefs);
+        applyConsent(prefs);
+        hideBanner();
+        nhCookieCloseModal();
+      };
+
+      window.nhCookieOpenModal = function () {
+        var prefs = getConsent();
+        if (prefs) {
+          document.getElementById('nh-toggle-marketing').checked = !!prefs.marketing;
+        }
+        modal.classList.add('open');
+      };
+
+      window.nhCookieCloseModal = function () {
+        modal.classList.remove('open');
+      };
+
+      modal.addEventListener('click', function (e) {
+        if (e.target === modal) nhCookieCloseModal();
+      });
+
+      var prefs = getConsent();
+      if (!prefs) {
+        setTimeout(function () { banner.classList.add('visible'); }, 600);
+      } else {
+        banner.style.display = 'none';
+        applyConsent(prefs);
+      }
+    })();
+  </script>
+  <!-- ============================================================
+  END COOKIE CONSENT BANNER
+  ============================================================ -->
+
+
 </body>
+
 </html>
